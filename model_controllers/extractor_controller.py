@@ -24,16 +24,24 @@ class ExtractorController(object):
         # SW2 regularizer and defaults
         self.SW2 = SlicedWasserstein()
         self.main_latent_config = self.config['main_latent']
+        if self.main_latent_config.get('regularization') is None:
+            self.main_latent_config['regularization'] = {}
 
         # Phenotype supervision configs
         if pheno_config is None:
             pheno_config = dict()
         self.pheno_config = pheno_config
+        for cur_pheno in self.pheno_config.keys():
+            if self.pheno_config[cur_pheno].get('regularization') is None:
+                self.pheno_config[cur_pheno]['regularization'] = {}
 
         # Signature supervision configs
         if signature_config is None:
             signature_config = dict()
         self.signature_config = signature_config
+        for cur_signature in self.signature_config.keys():
+            if self.signature_config[cur_signature].get('regularization') is None:
+                self.signature_config[cur_signature]['regularization'] = {}
 
         # Init trainer states
         self.cur_tick = 0
@@ -214,8 +222,8 @@ class ExtractorController(object):
             raise NotImplementedError
 
     def select_loss_dict(self, selection=None, internal=None):
-        if type(selection) is dict():
-            return selection.keys()
+        if type(selection) is list:
+            return selection
         elif selection == '*':
             return internal.keys()
         else:
@@ -242,24 +250,28 @@ class ExtractorController(object):
              forward_reconstruction=True, forward_main_latent=True,
              dump_forward_results=False):
         """
-        Obtain loss for all components in the network.
-        :param batch: dataset batch exported by rna_count object
-        :param expr_key: gene expression group to use as input (default: all) TODO: seemingly not useful argument
-        :param forward_pheno:
-        :param selected_pheno:
+
+        :param batch: batch of data to calculate loss
+        :param expr_key: expression group to use (typically, 'all')
+        :param forward_pheno: should calculate phenotype losses
+        :param selected_pheno: selected phenotype losses and regularizations to calculate
         :param forward_signature:
         :param selected_signature:
+        :param forward_reconstruction:
+        :param forward_main_latent:
         :param dump_forward_results:
         :return:
         """
-        # Forward model
-        fwd_res = self.model(batch['expr'][expr_key], forward_main_latent=forward_main_latent,
+        # Forward model (obtain pre-loss-calculated tensors)
+        fwd_res = self.model(batch['expr'][expr_key],
+                             forward_main_latent=forward_main_latent,
                              forward_reconstruction=forward_reconstruction,
                              forward_signature=forward_signature,
                              selected_signature=self.select_item_dict(selection=selected_signature,
                                                                       internal=self.signature_config),
                              forward_pheno=forward_pheno,
-                             selected_pheno=self.select_item_dict(selection=selected_pheno, internal=self.pheno_config))
+                             selected_pheno=self.select_item_dict(selection=selected_pheno,
+                                                                  internal=self.pheno_config))
 
         # Reconstruction Loss
         main_loss = {'loss': dict(), 'regularization': dict()}
@@ -380,10 +392,10 @@ class ExtractorController(object):
             ret['fwd_res'] = fwd_res
         return ret
 
-    def train_all(self, batch,
-                  backward_reconstruction_loss=True, backward_main_latent_regularization=True,
-                  backward_pheno_loss=True, selected_pheno: dict = None,
-                  backward_signature_loss=True, selected_signature: dict = None):
+    def train(self, batch,
+              backward_reconstruction_loss=True, backward_main_latent_regularization=True,
+              backward_pheno_loss=True, selected_pheno: dict = None,
+              backward_signature_loss=True, selected_signature: dict = None):
         """
         Train model using specified batch.
         :param batch: batched data, obtained from rna_count dataset
@@ -445,7 +457,7 @@ class ExtractorController(object):
     def eval(self, batch,
              forward_pheno=False, selected_pheno=None,
              forward_signature=False, selected_signature=None,
-             forward_reconstruction=False, dump_latent=False):
+             forward_reconstruction=False, forward_main_latent=False, dump_latent=False):
         """
         Evaluate losses.
         :param batch:
@@ -462,7 +474,7 @@ class ExtractorController(object):
         loss = None
         with torch.no_grad():
             loss = self.loss(batch=batch,
-                             expr_key='all',
+                             expr_key='all', forward_main_latent=forward_main_latent,
                              forward_pheno=forward_pheno, selected_pheno=selected_pheno,
                              forward_signature=forward_signature, selected_signature=selected_signature,
                              forward_reconstruction=forward_reconstruction, dump_forward_results=dump_latent)

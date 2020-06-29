@@ -234,7 +234,7 @@ class SAKRA(object):
             if (cur_pheno in pheno_meta.keys()) is False:
                 problematic_phenos.append(cur_pheno)
         if len(problematic_phenos) > 0:
-            print("Exists selecting phenotype(s) not configured:", problematic_phenos)
+            warnings.warn("Exists selecting phenotype(s) not configured:" + str(problematic_phenos))
             ret = False
 
         # Check pheno_df_keys of selected phenotypes are exist in the dataset
@@ -244,7 +244,7 @@ class SAKRA(object):
             if (cur_pheno_df_key in self.count_data.pheno_df.columns) is False:
                 problematic_phenos.append(cur_pheno)
         if len(problematic_phenos) > 0:
-            print("Exists selecting phenotype(s) not found in the dataset:", problematic_phenos)
+            warnings.warn("Exists selecting phenotype(s) not found in the dataset:" + str(problematic_phenos))
             ret = False
 
         # Gene signature checks
@@ -254,7 +254,8 @@ class SAKRA(object):
             if (cur_signature not in gene_meta.keys()) or (cur_signature not in signature_config.keys()):
                 problematic_signatures.append(cur_signature)
         if len(problematic_signatures) > 0:
-            print("Exists signatures not consistent in gene_meta and signature_config:", problematic_signatures)
+            warnings.warn(
+                "Exists signatures not consistent in gene_meta and signature_config:" + str(problematic_signatures))
             ret = False
 
         # Check consistency of gene signature sets
@@ -265,7 +266,8 @@ class SAKRA(object):
             if cur_gene_meta_contain != cur_signature_config_contain:
                 problematic_signatures.append(cur_signature)
         if len(problematic_signatures) > 0:
-            print("Genes in signature sets not consistent between gene_list and signature_config:", problematic_signatures)
+            warnings.warn("Genes in signature sets not consistent between gene_list and signature_config:" + str(
+                problematic_signatures))
             ret = False
 
         # Check genes are all exist in the dataset
@@ -275,8 +277,9 @@ class SAKRA(object):
             if all([x in self.count_data.gene_expr_mat.index for x in cur_gene_list]) is False:
                 problematic_signatures.append(cur_signature)
         if len(problematic_signatures) > 0:
-            print("Genes in signature sets not exist in the dataset:", problematic_signatures)
+            warnings.warn("Genes in signature sets not exist in the dataset:" + str(problematic_signatures))
             ret = False
+
         print("Integrity check ok:", ret)
         return ret
 
@@ -310,9 +313,9 @@ class SAKRA(object):
         # Argument checks
         if train_pheno:
             if selected_pheno is None:
-                warnings.warn("Selecting all included phenotypes and linked losses and regularizations:" + str(
-                    self.selected_pheno))
-                selected_pheno = self.selected_pheno
+                selected_pheno = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_pheno}
+                warnings.warn(
+                    "Selecting all included phenotypes and linked losses and regularizations:" + str(selected_pheno))
         else:
             if selected_pheno is not None:
                 raise ValueError(
@@ -320,9 +323,10 @@ class SAKRA(object):
 
         if train_signature:
             if selected_signature is None:
-                warnings.warn("Selecting all included signatures and linked losses and regularizations: " + str(
-                    self.selected_signature))
-                selected_signature = self.selected_signature
+                selected_signature = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_signature}
+                warnings.warn(
+                    "Selecting all included signatures and linked losses and regularizations: " + str(
+                        selected_signature))
         else:
             if selected_signature is not None:
                 raise ValueError(
@@ -349,7 +353,12 @@ class SAKRA(object):
 
             for cur_idx in sampler:
                 cur_batch = self.count_data[cur_idx]
-                controller_ret = self.controller.train_all(batch=cur_batch)
+                controller_ret = self.controller.train(batch=cur_batch,
+                                                       backward_reconstruction_loss=train_main,
+                                                       backward_main_latent_regularization=train_main,
+                                                       backward_pheno_loss=train_pheno, selected_pheno=selected_pheno,
+                                                       backward_signature_loss=train_signature,
+                                                       selected_signature=selected_signature)
                 if make_logs:
                     self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
                                          loss_name_prefix=log_prefix)
@@ -360,7 +369,7 @@ class SAKRA(object):
                 controller_ret = self.controller.eval(self.count_data[selected_split_mask],
                                                       forward_pheno=True, selected_pheno=None,
                                                       forward_signature=True, selected_signature=None,
-                                                      forward_reconstruction=True,
+                                                      forward_reconstruction=True, forward_main_latent=True,
                                                       dump_latent=True)
                 # TODO: use multithreading to split dumping from the main thread (maybe implement into Logger, rather than here)
                 self.logger.dump_latent_to_csv(controller_output=controller_ret,
@@ -383,7 +392,8 @@ class SAKRA(object):
                                               forward_signature=test_signature,
                                               selected_signature=selected_signature,
                                               forward_pheno=test_pheno, selected_pheno=selected_pheno,
-                                              forward_reconstruction=test_main, dump_latent=dump_latent)
+                                              forward_reconstruction=test_main, forward_main_latent=True,
+                                              dump_latent=dump_latent)
 
         # Log losses in tensorboard (by using Logger)
         if make_logs:
@@ -403,7 +413,6 @@ class SAKRA(object):
 
 
     def train_story(self, story:list):
-        # TODO: storyline training
         for cur_story_item in story:
             # Verbose logging
             if self.verbose:
@@ -418,6 +427,7 @@ class SAKRA(object):
                        selected_pheno=cur_story_item.get('selected_pheno'),
                        selected_signature=cur_story_item.get('selected_signature'),
                        epoch=cur_story_item['epochs'])
+
 
 if __name__ == '__main__':
     print('SCARE/SAKRA Prototype')

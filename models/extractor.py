@@ -114,39 +114,37 @@ class Extractor(torch.nn.Module):
         # Forward Main Latent
         lat_main = None
         lat_all = None
-        if forward_main_latent is True:
+        if forward_main_latent:
             lat_main = self.model['main_latent_compressor'](x)
             lat_all = lat_main
 
         # Forward signature supervision
         lat_signature = dict()
         signature_out = dict()
-        if forward_signature is True:
-            if selected_signature is None:
-                # Select all signature
-                selected_signature = self.signature_config.keys()
-            for cur_signature in selected_signature:
-                lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](x)
-                if forward_main_latent is True:
-                    lat_all = torch.cat((lat_all, lat_signature[cur_signature]), 1)
-                signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](
-                    lat_signature[cur_signature])
+        if selected_signature is None:
+            # Select all signature
+            selected_signature = self.signature_config.keys()
+        for cur_signature in selected_signature:
+            lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](x)
+            if forward_reconstruction or forward_signature:
+                lat_all = torch.cat((lat_all, lat_signature[cur_signature]), 1)
+            signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](
+                lat_signature[cur_signature])
 
         # Forward phenotype supervision
         lat_pheno = dict()
         pheno_out = dict()
-        if forward_pheno is True:
-            if selected_pheno is None:
-                selected_pheno = self.pheno_config.keys()
-            for cur_pheno in selected_pheno:
-                lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](x)
-                if forward_main_latent is True:
-                    lat_all = torch.cat((lat_all, lat_pheno[cur_pheno]), 1)
-                pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
+        if selected_pheno is None:
+            selected_pheno = self.pheno_config.keys()
+        for cur_pheno in selected_pheno:
+            lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](x)
+            if forward_reconstruction or forward_pheno:
+                lat_all = torch.cat((lat_all, lat_pheno[cur_pheno]), 1)
+            pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
 
         # Reconstruct input gene expression profiles
         re_x = None
-        if forward_reconstruction is True:
+        if forward_reconstruction:
             re_x = self.model['decoder'](lat_all)
 
         return {
