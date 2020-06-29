@@ -442,10 +442,10 @@ class ExtractorController(object):
 
         return loss
 
-    def eval_all(self, batch,
-                 forward_pheno=False, selected_pheno=None,
-                 forward_signature=False, selected_signature=None,
-                 forward_reconstruction=False, dump_latent=False):
+    def eval(self, batch,
+             forward_pheno=False, selected_pheno=None,
+             forward_signature=False, selected_signature=None,
+             forward_reconstruction=False, dump_latent=False):
         """
         Evaluate losses.
         :param batch:

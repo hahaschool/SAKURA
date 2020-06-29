@@ -1,6 +1,7 @@
 import argparse
 import json
 import random
+import warnings
 
 import numpy as np
 import torch.backends.cudnn
@@ -68,8 +69,12 @@ class SAKRA(object):
                                                           verbose=self.verbose)
 
             # Selecting phenotypes and signatures to be used
-            self.selected_pheno = self.config['dataset']['selected_pheno']
-            self.selected_signature = self.config['dataset']['selected_signature']
+            self.selected_pheno = self.config['dataset'].get('selected_pheno')
+            if self.selected_pheno is None:
+                self.selected_pheno = []
+            self.selected_signature = self.config['dataset'].get('selected_signature')
+            if self.selected_signature is None:
+                self.selected_signature = []
 
             # Read gene signature metadata
             if len(self.signature_config_path) > 0:
@@ -134,10 +139,15 @@ class SAKRA(object):
         self.logger = Logger(log_path=self.log_path)
 
         # Save settings to log folder
-        self.logger.save_config(self.count_data.pheno_meta, self.log_path+'/pheno_config.json')
-        self.logger.save_config(self.count_data.gene_meta, self.log_path+'/gene_meta.json')
-        self.logger.save_config(self.signature_config, self.log_path+'/signature_config.json')
-        self.logger.save_splits(self.splits, self.log_path+'/splits.pkl')
+        if self.config['dump_configs'] == 'True':
+            self.logger.save_config(self.count_data.pheno_meta, self.log_path + '/pheno_config.json')
+            self.logger.save_config(self.count_data.gene_meta, self.log_path + '/gene_meta.json')
+            self.logger.save_config(self.signature_config, self.log_path + '/signature_config.json')
+        if self.config['dump_splits'] == 'True':
+            self.logger.save_splits(self.splits, self.log_path + '/splits.pkl')
+
+        self.train_story(story=self.config['story'])
+
 
     def generate_splits(self):
         # Splits
@@ -154,8 +164,8 @@ class SAKRA(object):
                                                                          seed=self.split_overall_seed)
             overall_train_test_split = self.data_splitter.get_incremental_train_test_split(base=all_dec_bin,
                                                                                            k=self.split_overall_train_dec)
-            self.splits['overall_train_mask'] = overall_train_test_split['train'].astype(np.bool)
-            self.splits['overall_test_mask'] = overall_train_test_split['test'].astype(np.bool)
+            self.splits['overall_train'] = overall_train_test_split['train'].astype(np.bool)
+            self.splits['overall_test'] = overall_train_test_split['test'].astype(np.bool)
         else:
             # TODO: Manual overall train/test split
             raise NotImplementedError
@@ -187,8 +197,8 @@ class SAKRA(object):
             for cur_signature in self.selected_signature:
                 # Auto split
                 if self.signature_config[cur_signature]['split']['type'] == 'auto':
-                    train_split_id = 'signature_' + str(cur_pheno) + '_train'
-                    test_split_id = 'signature_' + str(cur_pheno) + '_test'
+                    train_split_id = 'signature_' + str(cur_signature) + '_train'
+                    test_split_id = 'signature_' + str(cur_signature) + '_test'
                     cur_base_split = self.splits[self.signature_config[cur_signature]['split']['base']].astype(
                         np.int32)
                     cur_base_bin_marks = self.data_splitter.auto_random_k_bin_labelling(base=cur_base_split,
@@ -300,17 +310,23 @@ class SAKRA(object):
         # Argument checks
         if train_pheno:
             if selected_pheno is None:
+                warnings.warn("Selecting all included phenotypes and linked losses and regularizations:" + str(
+                    self.selected_pheno))
                 selected_pheno = self.selected_pheno
         else:
             if selected_pheno is not None:
-                raise ValueError
+                raise ValueError(
+                    "Inconsistent training specification, specified phenotype to include in training but surpressed phenotype training.")
 
         if train_signature:
             if selected_signature is None:
+                warnings.warn("Selecting all included signatures and linked losses and regularizations: " + str(
+                    self.selected_signature))
                 selected_signature = self.selected_signature
         else:
             if selected_signature is not None:
-                raise ValueError
+                raise ValueError(
+                    "Inconsistent training specification, specified signature to include in training but surpressed signature training.")
 
 
         # Split mask
@@ -341,11 +357,11 @@ class SAKRA(object):
 
             if dump_latent:
                 # Forward the whole split to the model
-                controller_ret = self.controller.eval_all(self.count_data[selected_split_mask],
-                                                          forward_pheno=True, selected_pheno=None,
-                                                          forward_signature=True, selected_signature=None,
-                                                          forward_reconstruction=True,
-                                                          dump_latent=True)
+                controller_ret = self.controller.eval(self.count_data[selected_split_mask],
+                                                      forward_pheno=True, selected_pheno=None,
+                                                      forward_signature=True, selected_signature=None,
+                                                      forward_reconstruction=True,
+                                                      dump_latent=True)
                 # TODO: use multithreading to split dumping from the main thread (maybe implement into Logger, rather than here)
                 self.logger.dump_latent_to_csv(controller_output=controller_ret,
                                                dump_main=True,
@@ -353,11 +369,6 @@ class SAKRA(object):
                                                dump_signature=True, selected_signature=self.selected_signature,
                                                rownames=self.count_data.gene_expr_mat.columns[selected_split_mask],
                                                path=self.log_path+'/'+log_prefix+'_epoch_'+str(cur_epoch)+'_latent.csv')
-
-            instance.test(split_id='overall_test_mask',
-                          make_logs=True,
-                          dump_latent=True, latent_prefix='_epoch_'+str(cur_epoch))
-
 
     def test(self, split_id,
              test_main=True,
@@ -368,11 +379,11 @@ class SAKRA(object):
         selected_split_mask = self.splits[split_id]
 
         # Eval on split
-        controller_ret = self.controller.eval_all(self.count_data[selected_split_mask],
-                                                  forward_signature=test_signature,
-                                                  selected_signature=selected_signature,
-                                                  forward_pheno=test_pheno, selected_pheno=selected_pheno,
-                                                  forward_reconstruction=test_main, dump_latent=dump_latent)
+        controller_ret = self.controller.eval(self.count_data[selected_split_mask],
+                                              forward_signature=test_signature,
+                                              selected_signature=selected_signature,
+                                              forward_pheno=test_pheno, selected_pheno=selected_pheno,
+                                              forward_reconstruction=test_main, dump_latent=dump_latent)
 
         # Log losses in tensorboard (by using Logger)
         if make_logs:
@@ -396,19 +407,20 @@ class SAKRA(object):
         for cur_story_item in story:
             # Verbose logging
             if self.verbose:
-                print("Training story:")
+                print("Training story:", cur_story_item.get('remark'))
                 print(cur_story_item)
 
             # Select specified split
-            selected_split_mask = self.splits[cur_story_item['use_split']]
-
-
-
-        raise NotImplementedError
+            self.train(split_id=cur_story_item['use_split'],
+                       train_main=(cur_story_item['train_main_latent'] == 'True'),
+                       train_pheno=(cur_story_item['train_pheno'] == 'True'),
+                       train_signature=(cur_story_item['train_signature'] == 'True'),
+                       selected_pheno=cur_story_item.get('selected_pheno'),
+                       selected_signature=cur_story_item.get('selected_signature'),
+                       epoch=cur_story_item['epochs'])
 
 if __name__ == '__main__':
     print('SCARE/SAKRA Prototype')
     print('Loading dataset...')
     args = parse_args()
     instance = SAKRA(config_json_path=args.config, verbose=args.verbose)
-    instance.train('overall_train_mask')
