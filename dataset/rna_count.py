@@ -313,13 +313,13 @@ class SCRNASeqCountData(Dataset):
                 cur_expr_meta = self.gene_meta[cur_expr_key]
                 cur_expr_mat = None
                 # Gene Selection
-                if type(cur_expr_meta['gene_list']) is list or np.ndarray:
+                if type(cur_expr_meta['gene_list']) is list or type(cur_expr_meta['gene_list']) is np.ndarray:
                     # Select given genes
                     cur_expr_mat = self.gene_expr_mat.loc[cur_expr_meta['gene_list'], :].iloc[:, item].copy()
-                elif cur_expr_meta['gene_list'] is '*':
+                elif cur_expr_meta['gene_list'] == '*':
                     # Select all genes
                     cur_expr_mat = self.gene_expr_mat.iloc[:, item].copy()
-                elif cur_expr_meta['gene_list'] is '-':
+                elif cur_expr_meta['gene_list'] == '-':
                     # Deselect given genes
                     cur_expr_mat = self.gene_expr_mat.drop(cur_expr_meta['exclude_list'], axis=0).iloc[:, item].copy()
                 ret['expr'][cur_expr_key] = cur_expr_mat
