@@ -1,15 +1,18 @@
-import torch
 import functools
 
+import torch
+import torch.optim
+
+import utils.distributions as distributions
 from models.extractor import Extractor
 from utils.sliced_wasserstein import SlicedWasserstein
-import utils.distributions as distributions
+
 
 class ExtractorController(object):
     def __init__(self, model: Extractor,
-                 config:dict=None,
-                 pheno_config:dict=None,
-                 signature_config:dict=None,
+                 config: dict = None,
+                 pheno_config: dict = None,
+                 signature_config: dict = None,
                  verbose=False):
 
         self.verbose = verbose
@@ -53,7 +56,6 @@ class ExtractorController(object):
             print("Optimizers other than RMSProp not implemented.")
             raise NotImplementedError
 
-
     def reset(self):
         # Reset trainer state
         # Global tick and epoch counter
@@ -61,8 +63,8 @@ class ExtractorController(object):
         self.cur_epoch = 0
 
         # Main latent weight
-        self.main_loss_weight = dict()
-        self.main_epoch = dict()
+        self.main_loss_weight = {'loss': dict(), 'regularization': dict()}
+        self.main_epoch = {'loss': dict(), 'regularization': dict()}
         for cur_group in ['loss', 'regularization']:
             for cur_main_loss_key in self.main_latent_config[cur_group].keys():
                 self.main_loss_weight[cur_group][cur_main_loss_key] = \
@@ -85,11 +87,11 @@ class ExtractorController(object):
         self.signature_loss_weight = dict()
         self.signature_epoch = dict()
         for cur_signature in self.signature_config.keys():
-            self.signature_loss_weight[cur_signature] = {'loss':dict(), 'regularization':dict()}
-            self.signature_epoch[cur_signature] = {'loss':dict(), 'regularization':dict()}
+            self.signature_loss_weight[cur_signature] = {'loss': dict(), 'regularization': dict()}
+            self.signature_epoch[cur_signature] = {'loss': dict(), 'regularization': dict()}
             for cur_group in ['loss', 'regularization']:
                 for cur_signature_loss_key in self.signature_config[cur_signature][cur_group].keys():
-                    self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] =\
+                    self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] = \
                         self.signature_config[cur_signature][cur_group][cur_signature_loss_key]['init_weight']
                     self.signature_epoch[cur_signature][cur_group][cur_signature_loss_key] = 0
 
@@ -126,16 +128,17 @@ class ExtractorController(object):
         # Phenotype supervision and regularization loss weight progression
         if prog_pheno:
             if selected_pheno is None:
-                selected_pheno = {idx:{'loss':'*', 'regularization':'*'} for idx in self.pheno_config.keys()}
+                selected_pheno = {idx: {'loss': '*', 'regularization': '*'} for idx in self.pheno_config.keys()}
             for cur_pheno in selected_pheno.keys():
                 for cur_group in ['loss', 'regularization']:
-                    selected_pheno_loss_keys = selected_pheno[cur_group].keys()
-                    if selected_pheno_loss_keys == '*':
-                        selected_pheno_loss_keys = self.pheno_config[cur_pheno][cur_group].keys()
+                    selected_pheno_loss_keys = self.select_loss_dict(
+                        selection=selected_pheno[cur_pheno][cur_group],
+                        internal=self.pheno_config[cur_pheno][cur_group]
+                    )
                     for cur_pheno_loss_key in selected_pheno_loss_keys:
                         self.pheno_epoch[cur_pheno][cur_group][cur_pheno_loss_key] += 1
                         if self.pheno_epoch[cur_pheno][cur_group][cur_pheno_loss_key] >= \
-                                self.pheno_config[cur_pheno][cur_group]['progressive_start_epoch']:
+                                self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_start_epoch']:
                             self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] *= \
                                 self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_const']
 
@@ -145,15 +148,18 @@ class ExtractorController(object):
                 selected_signature = {idx: {'loss': '*', 'regularization': '*'} for idx in self.signature_config.keys()}
             for cur_signature in selected_signature.keys():
                 for cur_group in ['loss', 'regularization']:
-                    selected_signature_loss_keys = selected_signature[cur_group].keys()
-                    if selected_signature_loss_keys == '*':
-                        selected_signature_loss_keys = self.signature_config[cur_signature][cur_group].keys()
+                    selected_signature_loss_keys = self.select_loss_dict(
+                        selection=selected_signature[cur_signature][cur_group],
+                        internal=self.signature_config[cur_signature][cur_group]
+                    )
                     for cur_signature_loss_key in selected_signature_loss_keys:
                         self.signature_epoch[cur_signature][cur_group][cur_signature_loss_key] += 1
                         if self.signature_epoch[cur_signature][cur_group][cur_signature_loss_key] >= \
-                                self.signature_config[cur_signature][cur_group]['progressive_start_epoch']:
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
+                                    'progressive_start_epoch']:
                             self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] *= \
-                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key]['progressive_const']
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
+                                    'progressive_const']
 
     def regularize(self, tensor, regularization_config: dict, supervision=None):
         """
@@ -207,11 +213,34 @@ class ExtractorController(object):
             # TODO: Euclidean anchoring
             raise NotImplementedError
 
+    def select_loss_dict(self, selection=None, internal=None):
+        if type(selection) is dict():
+            return selection.keys()
+        elif selection == '*':
+            return internal.keys()
+        else:
+            raise ValueError
+
+    def select_item_dict(self, selection=None, internal=None, mode='keys'):
+        if mode == 'keys':
+            if selection is None or selection == '*':
+                # Select all in internal config
+                return internal.keys()
+            elif type(selection) is dict:
+                return selection.keys()
+            elif type(selection) is list:
+                return selection
+        elif mode == 'dict':
+            if selection is None or selection == '*':
+                return {idx: '*' for idx in internal.keys()}
+            elif type(selection) is dict():
+                return selection
 
     def loss(self, batch, expr_key='all',
-                 forward_pheno=True, selected_pheno=None,
-                 forward_signature=True, selected_signature=None,
-                 dump_forward_results=False):
+             forward_pheno=True, selected_pheno=None,
+             forward_signature=True, selected_signature=None,
+             forward_reconstruction=True, forward_main_latent=True,
+             dump_forward_results=False):
         """
         Obtain loss for all components in the network.
         :param batch: dataset batch exported by rna_count object
@@ -224,41 +253,53 @@ class ExtractorController(object):
         :return:
         """
         # Forward model
-        fwd_res = self.model(batch['expr'][expr_key])
+        fwd_res = self.model(batch['expr'][expr_key], forward_main_latent=forward_main_latent,
+                             forward_reconstruction=forward_reconstruction,
+                             forward_signature=forward_signature,
+                             selected_signature=self.select_item_dict(selection=selected_signature,
+                                                                      internal=self.signature_config),
+                             forward_pheno=forward_pheno,
+                             selected_pheno=self.select_item_dict(selection=selected_pheno, internal=self.pheno_config))
 
         # Reconstruction Loss
         main_loss = {'loss': dict(), 'regularization': dict()}
-        for cur_main_loss_key in self.main_latent_config['loss'].keys():
-            cur_main_loss = self.main_latent_config['loss'][cur_main_loss_key]
-            if cur_main_loss['type'] == 'MSE' or cur_main_loss['type'] == 'L2':
-                main_loss['loss'][cur_main_loss_key] = torch.nn.functional.mse_loss(fwd_res['x'], fwd_res['re_x'])
-            elif cur_main_loss['type'] == 'L1':
-                main_loss['loss'][cur_main_loss_key] = torch.nn.functional.l1_loss(fwd_res['x'], fwd_res['re_x'])
-            else:
-                print("Unsupported main latent loss type")
-                raise NotImplementedError
-            main_loss['loss'][cur_main_loss_key] *= self.main_loss_weight['loss'][cur_main_loss_key]
+        if forward_reconstruction:
+            for cur_main_loss_key in self.main_latent_config['loss'].keys():
+                cur_main_loss = self.main_latent_config['loss'][cur_main_loss_key]
+                if cur_main_loss['type'] == 'MSE' or cur_main_loss['type'] == 'L2':
+                    main_loss['loss'][cur_main_loss_key] = torch.nn.functional.mse_loss(fwd_res['x'], fwd_res['re_x'])
+                elif cur_main_loss['type'] == 'L1':
+                    main_loss['loss'][cur_main_loss_key] = torch.nn.functional.l1_loss(fwd_res['x'], fwd_res['re_x'])
+                else:
+                    print("Unsupported main latent loss type")
+                    raise NotImplementedError
+                main_loss['loss'][cur_main_loss_key] *= self.main_loss_weight['loss'][cur_main_loss_key]
 
         # Main latent regularizations
-        for cur_main_reg_loss_key in self.main_latent_config['regularization'].keys():
-            cur_main_reg_loss = self.main_latent_config['regularization'][cur_main_reg_loss_key]
-            if cur_main_reg_loss['type'] != 'none':
-                main_loss['regularization'][cur_main_reg_loss_key] = self.regularize(tensor=fwd_res['lat_main'],
-                                                                                     regularization_config=self.main_latent_reg)
-            main_loss['regularization'][cur_main_reg_loss_key] *= self.main_loss_weight['regularization'][cur_main_reg_loss_key]
+        if forward_main_latent:
+            for cur_main_reg_loss_key in self.main_latent_config['regularization'].keys():
+                cur_main_reg_loss = self.main_latent_config['regularization'][cur_main_reg_loss_key]
+                if cur_main_reg_loss['type'] != 'none':
+                    main_loss['regularization'][cur_main_reg_loss_key] = self.regularize(tensor=fwd_res['lat_main'],
+                                                                                         regularization_config=
+                                                                                         self.main_latent_config[
+                                                                                             'regularization'][
+                                                                                             cur_main_reg_loss_key])
+                main_loss['regularization'][cur_main_reg_loss_key] *= self.main_loss_weight['regularization'][
+                    cur_main_reg_loss_key]
 
         # Phenotype loss and regularization loss
         pheno_loss = dict()
         if forward_pheno:
             if selected_pheno is None:
-                selected_pheno = {idx:{'loss':'*', 'regularization':'*'} for idx in self.pheno_config.keys()}
+                # By default, select all phenotypes and all losses included
+                selected_pheno = {idx: {'loss': '*', 'regularization': '*'} for idx in self.pheno_config.keys()}
             for cur_pheno in selected_pheno.keys():
                 pheno_loss[cur_pheno] = {'loss': dict(), 'regularization': dict()}
                 pheno_ans = batch['pheno'][cur_pheno].squeeze()
                 # Phenotype loss
-                selected_pheno_loss_keys = selected_pheno['loss'].keys()
-                if selected_pheno_loss_keys == '*':
-                    selected_pheno_loss_keys = self.pheno_config[cur_pheno]['loss'].keys()
+                selected_pheno_loss_keys = self.select_loss_dict(selection=selected_pheno[cur_pheno]['loss'],
+                                                                 internal=self.pheno_config[cur_pheno]['loss'])
                 for cur_pheno_loss_key in selected_pheno_loss_keys:
                     cur_pheno_loss = self.pheno_config[cur_pheno]['loss'][cur_pheno_loss_key]
                     if cur_pheno_loss['type'] == 'NLL':
@@ -270,34 +311,36 @@ class ExtractorController(object):
                     else:
                         print('Unsupported phenotype supervision loss type.')
                         raise ValueError
-                    pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] *= self.pheno_loss_weight[cur_pheno][cur_pheno_loss_key]
+                    pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] *= self.pheno_loss_weight[cur_pheno]['loss'][
+                        cur_pheno_loss_key]
                 # Phenotype regularization loss
-                selected_pheno_reg_loss_keys = selected_pheno['regularization'].keys()
-                if selected_pheno_reg_loss_keys == '*':
-                    selected_pheno_reg_loss_keys = self.pheno_config[cur_pheno]['regularization'].keys()
+                selected_pheno_reg_loss_keys = self.select_loss_dict(
+                    selection=selected_pheno[cur_pheno]['regularization'],
+                    internal=self.pheno_config[cur_pheno]['regularization'])
                 for cur_pheno_reg_loss_key in selected_pheno_reg_loss_keys:
                     cur_pheno_reg_loss = self.pheno_config[cur_pheno]['regularization'][cur_pheno_reg_loss_key]
                     if cur_pheno_reg_loss['type'] != 'none':
                         pheno_loss[cur_pheno]['regularization'][cur_pheno_reg_loss_key] = \
                             self.regularize(tensor=fwd_res['lat_pheno'][cur_pheno],
-                                            regularization_config=self.pheno_config[cur_pheno]['regularization'],
+                                            regularization_config=self.pheno_config[cur_pheno]['regularization'][
+                                                cur_pheno_reg_loss_key],
                                             supervision=pheno_ans)
                         pheno_loss[cur_pheno]['regularization'][cur_pheno_reg_loss_key] *= \
                             self.pheno_loss_weight[cur_pheno]['regularization'][cur_pheno_reg_loss_key]
-
 
         # Signature loss and regularization
         signature_loss = dict()
         if forward_signature:
             if selected_signature is None:
                 # Select all signature
-                selected_signature = {idx:{'loss':'*', 'regularization':'*'} for idx in self.signature_config.keys()}
+                selected_signature = {idx: {'loss': '*', 'regularization': '*'} for idx in self.signature_config.keys()}
             for cur_signature in selected_signature.keys():
+                signature_loss[cur_signature] = {"loss": dict(), "regularization": dict()}
                 signature_ans = batch['expr'][cur_signature].squeeze()
                 # Signature loss
-                selected_signature_loss_keys = selected_signature[cur_signature]['loss']
-                if selected_signature_loss_keys == '*':
-                    selected_signature_loss_keys = self.signature_config[cur_signature]['loss'].keys()
+                selected_signature_loss_keys = self.select_loss_dict(
+                    selection=selected_signature[cur_signature]['loss'],
+                    internal=self.signature_config[cur_signature]['loss'])
                 for cur_signature_loss_key in selected_signature_loss_keys:
                     cur_signature_loss = self.signature_config[cur_signature]['loss'][cur_signature_loss_key]
                     if cur_signature_loss['type'] == 'MSE' or cur_signature_loss['type'] == 'L2':
@@ -312,16 +355,19 @@ class ExtractorController(object):
                     signature_loss[cur_signature]['loss'][cur_signature_loss_key] *= \
                         self.signature_loss_weight[cur_signature]['loss'][cur_signature_loss_key]
                 # Signature latent regularization
-                selected_signature_reg_loss_keys = selected_signature[cur_signature]['regularization']
-                if selected_signature_reg_loss_keys == '*':
-                    selected_signature_reg_loss_keys = self.signature_config[cur_signature]['regularization'].keys()
+                selected_signature_reg_loss_keys = \
+                    self.select_loss_dict(selection=selected_signature[cur_signature]['regularization'],
+                                          internal=self.signature_config[cur_signature]['regularization'])
                 for cur_signature_reg_loss_key in selected_signature_reg_loss_keys:
-                    cur_signature_reg_loss = self.signature_config[cur_signature]['regularization'][cur_signature_reg_loss_key]
+                    cur_signature_reg_loss = self.signature_config[cur_signature]['regularization'][
+                        cur_signature_reg_loss_key]
                     if cur_signature_reg_loss['type'] != 'none':
                         # TODO: support of supervised regularization (e.g. approximate regions based on bins of expression values)
                         signature_loss[cur_signature]['regularization'][cur_signature_reg_loss_key] = \
                             self.regularize(tensor=fwd_res['lat_signature'][cur_signature],
-                                            regularization_config=self.signature_config[cur_signature]['regularization'][cur_signature_reg_loss_key])
+                                            regularization_config=
+                                            self.signature_config[cur_signature]['regularization'][
+                                                cur_signature_reg_loss_key])
                         signature_loss[cur_signature]['regularization'][cur_signature_reg_loss_key] *= \
                             self.signature_loss_weight[cur_signature]['regularization'][cur_signature_reg_loss_key]
 
@@ -334,11 +380,10 @@ class ExtractorController(object):
             ret['fwd_res'] = fwd_res
         return ret
 
-
     def train_all(self, batch,
                   backward_reconstruction_loss=True, backward_main_latent_regularization=True,
-                  backward_pheno_loss=True, selected_pheno:dict=None,
-                  backward_signature_loss=True, selected_signature:dict=None):
+                  backward_pheno_loss=True, selected_pheno: dict = None,
+                  backward_signature_loss=True, selected_signature: dict = None):
         """
         Train model using specified batch.
         :param batch: batched data, obtained from rna_count dataset
@@ -354,11 +399,11 @@ class ExtractorController(object):
         self.model.train()
 
         # Forward model
-        loss = self.all_loss(batch,
-                             expr_key='all',
-                             forward_pheno=backward_pheno_loss, selected_pheno=selected_pheno,
-                             forward_signature=backward_signature_loss, selected_signature=selected_signature,
-                             dump_forward_results=False)
+        loss = self.loss(batch,
+                         expr_key='all',
+                         forward_pheno=backward_pheno_loss, selected_pheno=selected_pheno,
+                         forward_signature=backward_signature_loss, selected_signature=selected_signature,
+                         dump_forward_results=False)
 
         total_loss = torch.Tensor([0.])
         if self.device == 'cuda':
@@ -366,26 +411,26 @@ class ExtractorController(object):
 
         # Reconstruction loss
         if backward_reconstruction_loss:
-            for cur_main_loss in loss['main_latent_loss']['loss']:
+            for cur_main_loss in loss['main_latent_loss']['loss'].values():
                 total_loss += cur_main_loss
 
         # Main latent regularization
         if backward_main_latent_regularization:
-            for cur_main_reg_loss in loss['main_latent_loss']['regularization']:
+            for cur_main_reg_loss in loss['main_latent_loss']['regularization'].values():
                 total_loss += cur_main_reg_loss
 
         # Phenotype loss
         if backward_pheno_loss:
             for cur_group in ['loss', 'regularization']:
                 for cur_pheno in loss['pheno_loss'].keys():
-                    for cur_pheno_loss in loss['pheno_loss'][cur_pheno][cur_group]:
+                    for cur_pheno_loss in loss['pheno_loss'][cur_pheno][cur_group].values():
                         total_loss += cur_pheno_loss
 
         # Signature loss
         if backward_signature_loss:
             for cur_group in ['loss', 'regularization']:
                 for cur_signature in loss['signature_loss'].keys():
-                    for cur_signature_loss in loss['signature_loss'][cur_signature][cur_group]:
+                    for cur_signature_loss in loss['signature_loss'][cur_signature][cur_group].values():
                         total_loss += cur_signature_loss
 
         loss['total_loss_backwarded'] = total_loss
@@ -397,11 +442,10 @@ class ExtractorController(object):
 
         return loss
 
-
     def eval_all(self, batch,
                  forward_pheno=False, selected_pheno=None,
                  forward_signature=False, selected_signature=None,
-                 dump_latent=False):
+                 forward_reconstruction=False, dump_latent=False):
         """
         Evaluate losses.
         :param batch:
@@ -417,17 +461,16 @@ class ExtractorController(object):
 
         loss = None
         with torch.no_grad():
-            loss = self.all_loss(batch=batch,
-                                 expr_key='all',
-                                 forward_pheno=forward_pheno, selected_pheno=selected_pheno,
-                                 forward_signature=forward_signature, selected_signature=selected_signature,
-                                 dump_forward_results=dump_latent)
+            loss = self.loss(batch=batch,
+                             expr_key='all',
+                             forward_pheno=forward_pheno, selected_pheno=selected_pheno,
+                             forward_signature=forward_signature, selected_signature=selected_signature,
+                             forward_reconstruction=forward_reconstruction, dump_forward_results=dump_latent)
 
         return loss
 
     def train_signature(self, batch):
         raise NotImplementedError
-
 
     def train_pheno(self, batch):
         raise NotImplementedError

@@ -1,5 +1,6 @@
-import models.modules as model
 import torch
+
+import models.modules as model
 
 
 class Extractor(torch.nn.Module):
@@ -122,8 +123,9 @@ class Extractor(torch.nn.Module):
         signature_out = dict()
         if forward_signature is True:
             if selected_signature is None:
+                # Select all signature
                 selected_signature = self.signature_config.keys()
-            for cur_signature in selected_signature.keys():
+            for cur_signature in selected_signature:
                 lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](x)
                 if forward_main_latent is True:
                     lat_all = torch.cat((lat_all, lat_signature[cur_signature]), 1)
@@ -136,7 +138,7 @@ class Extractor(torch.nn.Module):
         if forward_pheno is True:
             if selected_pheno is None:
                 selected_pheno = self.pheno_config.keys()
-            for cur_pheno in selected_pheno.keys():
+            for cur_pheno in selected_pheno:
                 lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](x)
                 if forward_main_latent is True:
                     lat_all = torch.cat((lat_all, lat_pheno[cur_pheno]), 1)

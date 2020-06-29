@@ -1,10 +1,9 @@
-import os, sys
-import tensorboardX
-import numpy as np
-import pandas as pd
 import json
-from pathlib import Path
 import pickle
+from pathlib import Path
+
+import pandas as pd
+import tensorboardX
 
 
 class Logger(object):
@@ -29,7 +28,7 @@ class Logger(object):
             for cur_group in ['loss', 'regularization']:
                 for cur_loss_key in trainer_output['pheno_loss'][cur_pheno][cur_group].keys():
                     self.log_writer.add_scalar(loss_name_prefix + '_pheno_' + cur_pheno + '_' + cur_group + '_' + cur_loss_key,
-                                               trainer_output['pheno_loss'][cur_pheno][cur_group],
+                                               trainer_output['pheno_loss'][cur_pheno][cur_group][cur_loss_key],
                                                tick)
 
 
@@ -39,7 +38,7 @@ class Logger(object):
                 for cur_loss_key in trainer_output['signature_loss'][cur_signature][cur_group].keys():
                     self.log_writer.add_scalar(
                         loss_name_prefix + '_signature_' + cur_signature + '_' + cur_group + '_' + cur_loss_key,
-                        trainer_output['signature_loss'][cur_signature][cur_group],
+                        trainer_output['signature_loss'][cur_signature][cur_group][cur_loss_key],
                         tick)
 
 
@@ -81,11 +80,11 @@ class Logger(object):
         if dump_pheno:
             if selected_pheno is None:
                 raise ValueError
-            for cur_cat in selected_pheno:
+            for cur_pheno in selected_pheno:
                 lat_all.append(
-                    pd.DataFrame(controller_output['fwd_res']['lat_pheno'][cur_cat].numpy()).set_axis(
-                        [cur_cat + '.' + str(i + 1) for i in range(
-                            controller_output['fwd_res']['lat_pheno'][cur_cat].shape[1]
+                    pd.DataFrame(controller_output['fwd_res']['lat_pheno'][cur_pheno].numpy()).set_axis(
+                        [cur_pheno + '.' + str(i + 1) for i in range(
+                            controller_output['fwd_res']['lat_pheno'][cur_pheno].shape[1]
                         )], axis=1, inplace=False)
                 )
 

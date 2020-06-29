@@ -1,3 +1,6 @@
+import numpy as np
+import torch
+
 class SlicedWasserstein(object):
     def rand_projections(self, embedding_dim, num_samples=50):
         """This function generates `num_samples` random samples from the latent space's unit sphere.
@@ -12,7 +15,7 @@ class SlicedWasserstein(object):
         projections = [w / np.sqrt((w ** 2).sum())  # L2 normalization
                        for w in np.random.normal(size=(num_samples, embedding_dim))]
         projections = np.asarray(projections)
-        return torch.from_numpy(projections).type(torch.FloatTensor)
+        return torch.from_numpy(projections).float()
 
     def _sliced_wasserstein_distance(self, encoded_samples,
                                      distribution_samples,
@@ -61,7 +64,7 @@ class SlicedWasserstein(object):
 
             Args:
                 encoded_samples (tocrh.Tensor): tensor of encoded training samples
-                distribution_samples (torch.Tensor): tensor of drawn distribution training samples
+                distribution_fn (func): a function to generate distributions
                 num_projections (int): number of projections to approximate sliced wasserstein distance
                 p (int): power of distance metric
                 device (torch.device): torch device (default 'cpu')

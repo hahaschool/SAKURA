@@ -1,17 +1,18 @@
-import numpy as np
-import random
-import torch.cuda
-import torch.backends.cudnn
-import torch.optim
-import torch.utils.data
 import argparse
 import json
+import random
+
+import numpy as np
+import torch.backends.cudnn
+import torch.cuda
+import torch.optim
+import torch.utils.data
 
 from dataset import rna_count
-from utils.logger import Logger
-from utils.data_splitter import DataSplitter
-from models.extractor import Extractor
 from model_controllers.extractor_controller import ExtractorController
+from models.extractor import Extractor
+from utils.data_splitter import DataSplitter
+from utils.logger import Logger
 
 
 def parse_args():
@@ -58,7 +59,7 @@ class SAKRA(object):
             self.pheno_meta_path = self.config['dataset']['pheno_meta_path']
             self.signature_config_path = self.config['dataset']['signature_config_path']
             # TODO: load pre-defined splits (cell groups)
-            self.cell_group_config_path = self.config['dataset']['cell_group_config_path']
+            # self.cell_group_config_path = self.config['dataset']['cell_group_config_path']
             # Import count data
             self.count_data = rna_count.SCRNASeqCountData(gene_csv_path=self.expr_csv_path,
                                                           pheno_csv_path=self.pheno_csv_path,
@@ -77,8 +78,11 @@ class SAKRA(object):
 
             # Subset phenotype and gene signature sets
             self.count_data.pheno_meta = {sel: self.count_data.pheno_meta[sel] for sel in self.selected_pheno}
-            self.count_data.gene_meta = {sel: self.count_data.gene_meta[sel] for sel in
-                                         self.selected_signature + ['all']}
+            self.count_data.gene_meta = {sel: {
+                'gene_list': self.signature_config[sel]['signature_list'],
+                'pre_procedure': self.signature_config[sel]['pre_procedure'],
+                'post_procedure': self.signature_config[sel]['post_procedure']
+            } for sel in self.selected_signature}
             self.signature_config = {sel: self.signature_config[sel] for sel in self.selected_signature}
 
             # Build excluded_all gene set for signature supervision
@@ -87,9 +91,16 @@ class SAKRA(object):
                 if self.signature_config[cur_signature]['exclude_from_input'] == 'True':
                     genes_to_exclude.extend(self.signature_config[cur_signature]['signature_list'])
             if len(genes_to_exclude) > 0:
+                # Create excluded version of 'all' gene set
                 self.count_data.gene_meta['all'] = {
                     'gene_list': '-',
                     'exclude_list': genes_to_exclude,
+                    'pre_procedure': [],
+                    'post_procedure': [{'type': 'ToTensor'}]
+                }
+            else:
+                self.count_data.gene_meta['all'] = {
+                    'gene_list': '*',
                     'pre_procedure': [],
                     'post_procedure': [{'type': 'ToTensor'}]
                 }
@@ -104,8 +115,6 @@ class SAKRA(object):
         # Get actual gene count (input dimension)
         input_genes = self.count_data[0]['expr']['all'].shape[1]
 
-
-
         # Setup model
         self.model = Extractor(input_dim=input_genes,
                                signature_config=self.signature_config,
@@ -115,8 +124,8 @@ class SAKRA(object):
                                main_latent_dim=self.config['main_latent']['latent_dim'],
                                verbose=self.verbose)
         # Setup trainer
-        self.controller = ExtractorController(model = self.model,
-                                              device = self.device,
+        self.controller = ExtractorController(model=self.model,
+                                              config=self.config,
                                               pheno_config=self.count_data.pheno_meta,
                                               signature_config=self.signature_config,
                                               verbose=self.verbose)
@@ -140,7 +149,7 @@ class SAKRA(object):
             self.split_overall_train_dec = self.config['overall_train_test_split']['train_dec']
             self.split_overall_seed = self.config['overall_train_test_split']['seed']
             # Make overall train/test split
-            all_mask = np.ones(len(self.count_data), dtype=np.integer)
+            all_mask = np.ones(len(self.count_data), dtype=np.int32)
             all_dec_bin = self.data_splitter.auto_random_k_bin_labelling(base=all_mask, k=10,
                                                                          seed=self.split_overall_seed)
             overall_train_test_split = self.data_splitter.get_incremental_train_test_split(base=all_dec_bin,
@@ -159,7 +168,7 @@ class SAKRA(object):
                     train_split_id = 'pheno_' + str(cur_pheno) + '_train'
                     test_split_id = 'pheno_' + str(cur_pheno) + '_test'
                     cur_base_split = self.splits[self.count_data.pheno_meta[cur_pheno]['split']['base']].astype(
-                        np.integer)
+                        np.int32)
                     cur_base_bin_marks = self.data_splitter.auto_random_k_bin_labelling(base=cur_base_split,
                                                                                         k=10,
                                                                                         seed=self.count_data.pheno_meta[
@@ -181,7 +190,7 @@ class SAKRA(object):
                     train_split_id = 'signature_' + str(cur_pheno) + '_train'
                     test_split_id = 'signature_' + str(cur_pheno) + '_test'
                     cur_base_split = self.splits[self.signature_config[cur_signature]['split']['base']].astype(
-                        np.integer)
+                        np.int32)
                     cur_base_bin_marks = self.data_splitter.auto_random_k_bin_labelling(base=cur_base_split,
                                                                                         k=10,
                                                                                         seed=self.signature_config[
@@ -333,6 +342,9 @@ class SAKRA(object):
             if dump_latent:
                 # Forward the whole split to the model
                 controller_ret = self.controller.eval_all(self.count_data[selected_split_mask],
+                                                          forward_pheno=True, selected_pheno=None,
+                                                          forward_signature=True, selected_signature=None,
+                                                          forward_reconstruction=True,
                                                           dump_latent=True)
                 # TODO: use multithreading to split dumping from the main thread (maybe implement into Logger, rather than here)
                 self.logger.dump_latent_to_csv(controller_output=controller_ret,
@@ -357,13 +369,14 @@ class SAKRA(object):
 
         # Eval on split
         controller_ret = self.controller.eval_all(self.count_data[selected_split_mask],
-                                                  dump_latent=dump_latent)
+                                                  forward_signature=test_signature,
+                                                  selected_signature=selected_signature,
+                                                  forward_pheno=test_pheno, selected_pheno=selected_pheno,
+                                                  forward_reconstruction=test_main, dump_latent=dump_latent)
 
         # Log losses in tensorboard (by using Logger)
         if make_logs:
             self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
-                                 selected_cat=self.selected_pheno,
-                                 selected_signature=self.selected_signature,
                                  loss_name_prefix=log_prefix)
             self.controller.tick()
 
@@ -398,4 +411,4 @@ if __name__ == '__main__':
     print('Loading dataset...')
     args = parse_args()
     instance = SAKRA(config_json_path=args.config, verbose=args.verbose)
-
+    instance.train('overall_train_mask')
