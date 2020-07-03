@@ -154,6 +154,9 @@ class SAKRA(object):
         self.splits = dict()
         self.data_splitter = DataSplitter()
 
+        # Dummy 'all' split mask
+        self.splits['all'] = np.ones(len(self.count_data), dtype=np.bool)
+
         ## Overall train/test split
         if self.config['overall_train_test_split']['type'] == 'auto':
             self.split_overall_train_dec = self.config['overall_train_test_split']['train_dec']
@@ -293,7 +296,8 @@ class SAKRA(object):
               train_signature=True, selected_signature=None,
               epoch=50, batch_size=100,
               tick_controller_epoch=True,
-              make_logs=True, dump_latent=True, log_prefix='train', latent_prefix=''):
+              make_logs=True, dump_latent=True, log_prefix='train', latent_prefix='',
+              test_every_epoch=False, tests=None):
         """
         Batch train model for at least one epoch.
         :param split_id: (str) id of the split to be used in this train
@@ -311,6 +315,8 @@ class SAKRA(object):
         :param dump_latent: (bool) should all latent space representations be dumped after each batch (only cells within the split will be dumped)
         :param log_prefix: (str) the prefix of the training log (for losses, this prefix will be added first to the item name in tensorboard and filename of latent embeddings)
         :param latent_prefix: (str) the prefix to be added after log_prefix to latent embedding filename
+        :param test_every_epoch: (bool) should test/evaluation be performed after finishing each epochs
+        :param tests: (list of dict) test configurations
         :return:
         """
 
@@ -374,21 +380,19 @@ class SAKRA(object):
                                          loss_name_prefix=log_prefix)
                 self.controller.tick()
 
-            if dump_latent:
-                # Forward the whole split to the model
-                controller_ret = self.controller.eval(self.count_data[selected_split_mask],
-                                                      forward_pheno=True, selected_pheno=None,
-                                                      forward_signature=True, selected_signature=None,
-                                                      forward_reconstruction=True, forward_main_latent=True,
-                                                      dump_latent=True)
-                # TODO: use multithreading to split dumping from the main thread (maybe implement into Logger, rather than here)
-                self.logger.dump_latent_to_csv(controller_output=controller_ret,
-                                               dump_main=True,
-                                               dump_pheno=True, selected_pheno=self.selected_pheno,
-                                               dump_signature=True, selected_signature=self.selected_signature,
-                                               rownames=self.count_data.gene_expr_mat.columns[selected_split_mask],
-                                               path=self.log_path + '/' + log_prefix + latent_prefix + str(
-                                                   cur_epoch) + '_latent.csv')
+            # Perform tests if needed
+            if test_every_epoch:
+                for cur_test in tests:
+                    # When test, all latents will be evaluated
+                    self.test(split_id=cur_test['on_split'],
+                              test_main=True,
+                              test_pheno=True, selected_pheno=None,
+                              test_signature=True, selected_signature=None,
+                              make_logs=(cur_test.get('make_logs') == 'True'),
+                              log_prefix=cur_test.get('log_prefix', 'test'),
+                              dump_latent=(cur_test.get('dump_latent') == 'True'),
+                              latent_prefix=cur_test.get('latent_prefix', ''))
+
 
     def test(self, split_id,
              test_main=True,
@@ -419,7 +423,8 @@ class SAKRA(object):
                                            dump_pheno=True, selected_pheno=self.selected_pheno,
                                            dump_signature=True, selected_signature=self.selected_signature,
                                            rownames=self.count_data.gene_expr_mat.columns[selected_split_mask],
-                                           path=self.log_path+'/'+log_prefix+latent_prefix+'_latent.csv')
+                                           path=self.log_path + '/' + str(
+                                               self.controller.cur_epoch) + '_' + latent_prefix + '.csv')
 
 
 
@@ -438,7 +443,11 @@ class SAKRA(object):
                        selected_pheno=cur_story_item.get('selected_pheno'),
                        selected_signature=cur_story_item.get('selected_signature'),
                        epoch=cur_story_item['epochs'],
-                       batch_size=cur_story_item.get('batch_size'))
+                       make_logs=(cur_story_item.get('make_logs') == 'True'),
+                       log_prefix=cur_story_item.get('log_prefix', 'train'),
+                       batch_size=cur_story_item.get('batch_size'),
+                       test_every_epoch=(cur_story_item.get('test_every_epoch') == 'True'),
+                       tests=cur_story_item.get('tests'))
 
 
 if __name__ == '__main__':
