@@ -434,20 +434,36 @@ class SAKRA(object):
             if self.verbose:
                 print("Training story:", cur_story_item.get('remark'))
                 print(cur_story_item)
+            cur_action = cur_story_item.get('action', 'train')
 
-            # Select specified split
-            self.train(split_id=cur_story_item['use_split'],
-                       train_main=(cur_story_item['train_main_latent'] == 'True'),
-                       train_pheno=(cur_story_item['train_pheno'] == 'True'),
-                       train_signature=(cur_story_item['train_signature'] == 'True'),
-                       selected_pheno=cur_story_item.get('selected_pheno'),
-                       selected_signature=cur_story_item.get('selected_signature'),
-                       epoch=cur_story_item['epochs'],
-                       make_logs=(cur_story_item.get('make_logs') == 'True'),
-                       log_prefix=cur_story_item.get('log_prefix', 'train'),
-                       batch_size=cur_story_item.get('batch_size'),
-                       test_every_epoch=(cur_story_item.get('test_every_epoch') == 'True'),
-                       tests=cur_story_item.get('tests'))
+            if cur_action == 'train':
+                self.train(split_id=cur_story_item['use_split'],
+                           train_main=(cur_story_item['train_main_latent'] == 'True'),
+                           train_pheno=(cur_story_item['train_pheno'] == 'True'),
+                           train_signature=(cur_story_item['train_signature'] == 'True'),
+                           selected_pheno=cur_story_item.get('selected_pheno'),
+                           selected_signature=cur_story_item.get('selected_signature'),
+                           epoch=cur_story_item['epochs'],
+                           make_logs=(cur_story_item.get('make_logs') == 'True'),
+                           log_prefix=cur_story_item.get('log_prefix', 'train'),
+                           batch_size=cur_story_item.get('batch_size'),
+                           test_every_epoch=(cur_story_item.get('test_every_epoch') == 'True'),
+                           tests=cur_story_item.get('tests'))
+            elif cur_action == 'test':
+                self.test(split_id=cur_story_item['on_split'],
+                          test_main=True,
+                          test_pheno=True, selected_pheno=None,
+                          test_signature=True, selected_signature=None,
+                          make_logs=(cur_story_item.get('make_logs') == 'True'),
+                          log_prefix=cur_story_item.get('log_prefix', 'test'),
+                          dump_latent=(cur_story_item.get('dump_latent') == 'True'),
+                          latent_prefix=cur_story_item.get('latent_prefix', ''))
+            elif cur_action == 'checkpoint':
+                # TODO: save model and optimizer state for resuming
+                raise NotImplementedError
+            elif cur_action == 'resume':
+                # TODO: support resuming from checkpoints
+                raise NotImplementedError
 
 
 if __name__ == '__main__':
