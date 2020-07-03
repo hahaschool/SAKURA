@@ -550,12 +550,6 @@ class ExtractorController(object):
 
         return loss
 
-    def train_signature(self, batch):
-        raise NotImplementedError
-
-    def train_pheno(self, batch):
-        raise NotImplementedError
-
     def save_checkpoint(self):
         raise NotImplementedError
 

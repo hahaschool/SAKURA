@@ -128,7 +128,7 @@ class Extractor(torch.nn.Module):
             for cur_signature in selected_signature:
                 lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](x)
                 lat_all = torch.cat((lat_all, lat_signature[cur_signature]), 1)
-            signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](
+                signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](
                 lat_signature[cur_signature])
 
         # Forward phenotype supervision
@@ -140,7 +140,7 @@ class Extractor(torch.nn.Module):
             for cur_pheno in selected_pheno:
                 lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](x)
                 lat_all = torch.cat((lat_all, lat_pheno[cur_pheno]), 1)
-            pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
+                pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
 
         # Reconstruct input gene expression profiles
         re_x = None

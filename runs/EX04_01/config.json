@@ -1,0 +1,271 @@
+{
+    "log_path": "./runs/EX04_01/logs/",
+    "reproducible": "True",
+    "rnd_seed": 114514,
+    "dataset": {
+        "type": "rna_count",
+        "expr_csv_path": "./dataset/PUMC_mouse_cardio/sctransform_poission_res_csv.gz",
+        "pheno_csv_path": "./dataset/PUMC_mouse_cardio/TAC_cell_info_191024.csv",
+        "pheno_meta_path": "./runs/EX04_01/pheno_meta.json",
+        "selected_pheno": [
+            "bigClass"
+        ]
+    },
+    "device": "cpu",
+    "overall_train_test_split": {
+        "type": "auto",
+        "train_dec": 8,
+        "seed": 1919
+    },
+    "main_latent": {
+        "encoder_neurons": 50,
+        "decoder_neurons": 50,
+        "latent_dim": 2,
+        "loss": {
+            "L2": {
+                "type": "MSE",
+                "init_weight": 1.0,
+                "progressive_const": 1.0,
+                "progressive_start_epoch": 100
+            },
+            "L1": {
+                "type": "L1",
+                "init_weight": 1.0,
+                "progressive_const": 1.0,
+                "progressive_start_epoch": 100
+            }
+        },
+        "regularization": {
+            "uniform_shape_unsupervised": {
+                "type": "SW2_uniform",
+                "init_weight": 1.0,
+                "progressive_const": 1.01,
+                "progressive_start_epoch": 10,
+                "SW2_num_projections": 50,
+                "uniform_low": -10,
+                "uniform_high": 10
+            }
+        }
+    },
+    "optimizer": {
+        "type": "RMSProp",
+        "RMSProp_lr": 0.001,
+        "RMSProp_alpha": 0.9
+    },
+    "dump_configs": "True",
+    "dump_splits": "True",
+    "story": [
+        {
+            "action": "train",
+            "epochs": 10,
+            "use_split": "overall_train",
+            "train_main_latent": "True",
+            "train_pheno": "False",
+            "train_signature": "False",
+            "remark": "Initial train of main latent space",
+            "batch_size": 50,
+            "make_logs": "True",
+            "log_prefix": "overall_train",
+            "test_every_epoch": "True",
+            "tests": [
+                {
+                    "on_split": "all",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "all_cell_all_latent"
+                },
+                {
+                    "on_split": "overall_test",
+                    "make_logs": "True",
+                    "log_prefix": "overall_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_test_all_latent"
+                },
+                {
+                    "on_split": "overall_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_train_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_test",
+                    "make_logs": "True",
+                    "log_prefix": "bigClass_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_test_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_train_all_latent"
+                }
+            ]
+        },
+        {
+            "action": "train",
+            "epochs": 20,
+            "use_split": "pheno_bigClass_train",
+            "train_main_latent": "True",
+            "train_pheno": "True",
+            "selected_pheno": {
+                "bigClass": {
+                    "loss": "*",
+                    "regularization": [
+                        "shape_uniform_supervised"
+                    ]
+                }
+            },
+            "train_signature": "False",
+            "remark": "Focus on bigClass classifier and supervised regularization",
+            "batch_size": 50,
+            "make_logs": "True",
+            "log_prefix": "bigClass_train",
+            "test_every_epoch": "True",
+            "tests": [
+                {
+                    "on_split": "all",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "all_cell_all_latent"
+                },
+                {
+                    "on_split": "overall_test",
+                    "make_logs": "True",
+                    "log_prefix": "overall_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_test_all_latent"
+                },
+                {
+                    "on_split": "overall_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_train_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_test",
+                    "make_logs": "True",
+                    "log_prefix": "bigClass_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_test_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_train_all_latent"
+                }
+            ]
+        },
+        {
+            "action": "train",
+            "epochs": 10,
+            "use_split": "overall_train",
+            "train_main_latent": "True",
+            "train_pheno": "True",
+            "selected_pheno": {
+                "bigClass": {
+                    "loss": [],
+                    "regularization": [
+                        "shape_uniform_unsupervised"
+                    ]
+                }
+            },
+            "train_signature": "False",
+            "remark": "Refine main latent space and overall shape of bigClass dimension",
+            "batch_size": 50,
+            "make_logs": "True",
+            "log_prefix": "overall_train",
+            "test_every_epoch": "True",
+            "tests": [
+                {
+                    "on_split": "all",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "all_cell_all_latent"
+                },
+                {
+                    "on_split": "overall_test",
+                    "make_logs": "True",
+                    "log_prefix": "overall_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_test_all_latent"
+                },
+                {
+                    "on_split": "overall_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_train_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_test",
+                    "make_logs": "True",
+                    "log_prefix": "bigClass_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_test_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_train_all_latent"
+                }
+            ]
+        },
+        {
+            "action": "train",
+            "epochs": 20,
+            "use_split": "pheno_bigClass_train",
+            "train_main_latent": "True",
+            "train_pheno": "True",
+            "selected_pheno": {
+                "bigClass": {
+                    "loss": "*",
+                    "regularization": [
+                        "shape_uniform_supervised"
+                    ]
+                }
+            },
+            "train_signature": "False",
+            "remark": "Refine bigClass classifier and supervised regularization",
+            "batch_size": 50,
+            "make_logs": "True",
+            "log_prefix": "bigClass_train",
+            "test_every_epoch": "True",
+            "tests": [
+                {
+                    "on_split": "all",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "all_cell_all_latent"
+                },
+                {
+                    "on_split": "overall_test",
+                    "make_logs": "True",
+                    "log_prefix": "overall_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_test_all_latent"
+                },
+                {
+                    "on_split": "overall_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "overall_train_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_test",
+                    "make_logs": "True",
+                    "log_prefix": "bigClass_test",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_test_all_latent"
+                },
+                {
+                    "on_split": "pheno_bigClass_train",
+                    "make_logs": "False",
+                    "dump_latent": "True",
+                    "latent_prefix": "bigClass_train_all_latent"
+                }
+            ]
+        }
+    ]
+}

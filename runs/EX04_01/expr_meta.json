@@ -1,0 +1,105 @@
+{
+    "all": {
+        "key": "all",
+        "gene_list": "*",
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    },
+    "CM": {
+        "key": "CM",
+        "gene_list": [
+            "Tnnt2",
+            "Actn2",
+            "Myh6",
+            "Myh7",
+            "Tnni3"
+        ],
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    },
+    "EC": {
+        "key": "EC",
+        "gene_list": [
+            "Cdh5",
+            "Vwf",
+            "Kdr",
+            "Eng",
+            "Pecam1"
+        ],
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    },
+    "FB": {
+        "key": "FB",
+        "gene_list": [
+            "Fn1",
+            "Vim",
+            "Pdgfra"
+        ],
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    },
+    "MP": {
+        "key": "MP",
+        "gene_list": [
+            "Cd68",
+            "Csf1r",
+            "Cd163",
+            "C5ar1",
+            "Mrc1"
+        ],
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    },
+    "T": {
+        "key": "T",
+        "gene_list": [
+            "Ptprc",
+            "Cd3d",
+            "Cd2",
+            "Cd4",
+            "Cd8a",
+            "Cd3e"
+        ],
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    },
+    "GN": {
+        "key": "GN",
+        "gene_list": [
+            "S100a8",
+            "S100a9",
+            "Csf3r"
+        ],
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToTensor"
+            }
+        ]
+    }
+}

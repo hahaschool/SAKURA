@@ -55,10 +55,10 @@ class SAKRA(object):
 
         # Dataset
         if self.config['dataset']['type'] == 'rna_count':
-            self.expr_csv_path = self.config['dataset']['expr_csv_path']
-            self.pheno_csv_path = self.config['dataset']['pheno_csv_path']
-            self.pheno_meta_path = self.config['dataset']['pheno_meta_path']
-            self.signature_config_path = self.config['dataset']['signature_config_path']
+            self.expr_csv_path = self.config['dataset'].get('expr_csv_path')
+            self.pheno_csv_path = self.config['dataset'].get('pheno_csv_path')
+            self.pheno_meta_path = self.config['dataset'].get('pheno_meta_path')
+            self.signature_config_path = self.config['dataset'].get('signature_config_path')
             # TODO: load pre-defined splits (cell groups)
             # self.cell_group_config_path = self.config['dataset']['cell_group_config_path']
             # Import count data
@@ -77,9 +77,11 @@ class SAKRA(object):
                 self.selected_signature = []
 
             # Read gene signature metadata
-            if len(self.signature_config_path) > 0:
+            if self.signature_config_path is not None and len(self.signature_config_path) > 0:
                 with open(self.signature_config_path, 'r') as f:
                     self.signature_config = json.load(f)
+            else:
+                self.signature_config = {}
 
             # Subset phenotype and gene signature sets
             self.count_data.pheno_meta = {sel: self.count_data.pheno_meta[sel] for sel in self.selected_pheno}
