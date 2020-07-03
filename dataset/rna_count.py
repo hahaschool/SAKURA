@@ -1,16 +1,10 @@
-import os
-import sys
-import copy
-import pandas as pd
-import numpy as np
-import sklearn.preprocessing as skprep
-import sklearn.model_selection as skmodsl
-import sklearn
-import torch
 import json
 
-from torch.utils.data import Dataset, DataLoader
+import numpy as np
+import pandas as pd
 import sklearn.preprocessing as skprep
+import torch
+from torch.utils.data import Dataset
 
 
 class ToTensor(object):
@@ -169,7 +163,9 @@ class SCRNASeqCountData(Dataset):
         self.gene_expr_mat = self._gene_expr_mat_orig.copy()
 
         if self.verbose:
-            print("Gene expression matrix CSV from:", self.gene_csv_path)
+            print('==========================')
+            print('rna_count dataset:')
+            print("Imported gene expression matrix CSV from:", self.gene_csv_path)
             print(self.gene_expr_mat.shape)
             print(self.gene_expr_mat.head(3))
 
@@ -187,6 +183,8 @@ class SCRNASeqCountData(Dataset):
                     ]
                 }
             }
+            if self.verbose:
+                print('No external gene expression set provided, using dummy.')
         if self.gene_meta_json_path is not None:
             with open(self.gene_meta_json_path, 'r') as f:
                 self.gene_meta = json.load(f)

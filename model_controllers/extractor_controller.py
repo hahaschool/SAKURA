@@ -15,6 +15,15 @@ class ExtractorController(object):
                  signature_config: dict = None,
                  verbose=False):
 
+        """
+        Initializer of Extractor controller.
+        :param model: Extractor model
+        :param config: experiment configuration dict
+        :param pheno_config: phenotype supervision configuration
+        :param signature_config: signature supervision configuration
+        :param verbose: should verbose console output/logging
+        """
+
         self.verbose = verbose
 
         self.model = model
@@ -24,22 +33,36 @@ class ExtractorController(object):
         # SW2 regularizer and defaults
         self.SW2 = SlicedWasserstein()
         self.main_latent_config = self.config['main_latent']
+
+        # Line main latent config
+        # Supporting no regularization option on main latent space
         if self.main_latent_config.get('regularization') is None:
             self.main_latent_config['regularization'] = {}
+        # Requiring loss for reconstruction
+        if self.main_latent_config.get('loss') is None:
+            raise ValueError('At least one loss should be configured for main latent space')
 
-        # Phenotype supervision configs
+        # Phenotype supervision configs (internal)
         if pheno_config is None:
             pheno_config = dict()
         self.pheno_config = pheno_config
+        # Lint phenotype configs
         for cur_pheno in self.pheno_config.keys():
+            # Requiring loss to be configured
+            if self.pheno_config[cur_pheno].get('loss') is None:
+                raise ValueError('No loss configured for phenotype:' + cur_pheno)
+            # Optional regularization
             if self.pheno_config[cur_pheno].get('regularization') is None:
                 self.pheno_config[cur_pheno]['regularization'] = {}
 
-        # Signature supervision configs
+        # Signature supervision configs (internal)
         if signature_config is None:
             signature_config = dict()
         self.signature_config = signature_config
+        # Lint signature configs
         for cur_signature in self.signature_config.keys():
+            if self.signature_config[cur_signature].get('loss') is None:
+                raise ValueError('No loss configured for signature:' + cur_signature)
             if self.signature_config[cur_signature].get('regularization') is None:
                 self.signature_config[cur_signature]['regularization'] = {}
 
@@ -52,6 +75,7 @@ class ExtractorController(object):
         self.reset()
 
         # Move model to assigned device
+        # TODO: GPU support of Extractor controller
         if self.device is 'cuda':
             self.model.cuda()
 
@@ -63,6 +87,15 @@ class ExtractorController(object):
         else:
             print("Optimizers other than RMSProp not implemented.")
             raise NotImplementedError
+
+        if verbose:
+            print('===========================')
+            print('Extractor controller')
+            print(self.pheno_config)
+            print(self.signature_config)
+            print(self.main_latent_config)
+            print(self.optimizer)
+            print('===========================')
 
     def reset(self):
         # Reset trainer state
@@ -169,6 +202,15 @@ class ExtractorController(object):
                                 self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
                                     'progressive_const']
 
+        if self.verbose:
+            print('[Extractor Controller]: next epoch, current global epoch:', self.cur_epoch)
+            print('Main latent loss-wise epochs:', self.main_epoch)
+            print('Main latent loss-wise weights:', self.main_loss_weight)
+            print('Phenotype loss-wise epochs:', self.pheno_epoch)
+            print('Phenotype loss-wise weights:', self.pheno_loss_weight)
+            print('Signature loss-wise epochs:', self.signature_epoch)
+            print('Signature loss-wise weights:', self.signature_loss_weight)
+
     def regularize(self, tensor, regularization_config: dict, supervision=None):
         """
         Handle regularizations.
@@ -230,6 +272,13 @@ class ExtractorController(object):
             raise ValueError
 
     def select_item_dict(self, selection=None, internal=None, mode='keys'):
+        """
+        Utility method to handle selections from internal phenotype/signature configs.
+        :param selection: selection object, could be dict, list, str, or None.
+        :param internal: internal config dict to select
+        :param mode: By default, 'key', will return a key list after selection
+        :return:
+        """
         if mode == 'keys':
             if selection is None or selection == '*':
                 # Select all in internal config
@@ -238,6 +287,10 @@ class ExtractorController(object):
                 return selection.keys()
             elif type(selection) is list:
                 return selection
+            elif type(selection) is str:
+                return [selection]
+            else:
+                raise ValueError
         elif mode == 'dict':
             if selection is None or selection == '*':
                 return {idx: '*' for idx in internal.keys()}
@@ -250,16 +303,21 @@ class ExtractorController(object):
              forward_reconstruction=True, forward_main_latent=True,
              dump_forward_results=False):
         """
-
+        Calculate loss
         :param batch: batch of data to calculate loss
-        :param expr_key: expression group to use (typically, 'all')
-        :param forward_pheno: should calculate phenotype losses
-        :param selected_pheno: selected phenotype losses and regularizations to calculate
-        :param forward_signature:
-        :param selected_signature:
-        :param forward_reconstruction:
-        :param forward_main_latent:
-        :param dump_forward_results:
+        :param expr_key: expression group to use as input (by default, 'all')
+        :param forward_pheno: should calculate phenotype related losses
+        :param selected_pheno: phenotype selection for loss calculation, should be None (selecting all phenotypes, and
+        related losses and regularizations), or a dictionary formulated as:
+        {'pheno_name': {'loss': [list of loss names] or '*' (selecting all), 'regularization': [list of regularization
+        names, could be Null] or '*' or None (no regularization)}}
+        :param forward_signature: should calculate signature related losses
+        :param selected_signature: signature selection for loss calculation, should be None (selecting all signatures,
+        and related losses and regularizations), or a dictionary formulated similar to selected_pheno
+        :param forward_reconstruction: should calculate reconstruction loss (for Extractor model, when this turn on, all
+         latents will be calculated by force)
+        :param forward_main_latent: should calculate main latent
+        :param dump_forward_results: should preserve forwarded tensors in the return dict
         :return:
         """
         # Forward model (obtain pre-loss-calculated tensors)
@@ -390,6 +448,7 @@ class ExtractorController(object):
         }
         if dump_forward_results:
             ret['fwd_res'] = fwd_res
+
         return ret
 
     def train(self, batch,
@@ -413,6 +472,8 @@ class ExtractorController(object):
         # Forward model
         loss = self.loss(batch,
                          expr_key='all',
+                         forward_reconstruction=backward_reconstruction_loss,
+                         forward_main_latent=backward_main_latent_regularization,
                          forward_pheno=backward_pheno_loss, selected_pheno=selected_pheno,
                          forward_signature=backward_signature_loss, selected_signature=selected_signature,
                          dump_forward_results=False)
@@ -452,6 +513,10 @@ class ExtractorController(object):
         total_loss.backward()
         self.optimizer.step()
 
+        # Verbose output for debug
+        if self.verbose:
+            print(loss)
+
         return loss
 
     def eval(self, batch,
@@ -478,6 +543,10 @@ class ExtractorController(object):
                              forward_pheno=forward_pheno, selected_pheno=selected_pheno,
                              forward_signature=forward_signature, selected_signature=selected_signature,
                              forward_reconstruction=forward_reconstruction, dump_forward_results=dump_latent)
+
+        if self.verbose:
+            torch.set_printoptions(threshold=1, edgeitems=1, profile='short')
+            print(loss)
 
         return loss
 

@@ -217,6 +217,7 @@ class SAKRA(object):
 
         ## Print splits for debugging (in verbose mode)
         if self.verbose:
+            print('==========================')
             print('Splits:')
             print(self.splits)
 
@@ -280,7 +281,9 @@ class SAKRA(object):
             warnings.warn("Genes in signature sets not exist in the dataset:" + str(problematic_signatures))
             ret = False
 
-        print("Integrity check ok:", ret)
+        if self.verbose:
+            print('==========================')
+            print("Configuration integrity pre-check ok:", ret)
         return ret
 
     def train(self,
@@ -290,7 +293,7 @@ class SAKRA(object):
               train_signature=True, selected_signature=None,
               epoch=50, batch_size=100,
               tick_controller_epoch=True,
-              make_logs=True, dump_latent=True, log_prefix='train'):
+              make_logs=True, dump_latent=True, log_prefix='train', latent_prefix=''):
         """
         Batch train model for at least one epoch.
         :param split_id: (str) id of the split to be used in this train
@@ -306,7 +309,8 @@ class SAKRA(object):
         :param tick_controller_epoch: (bool) should controller epoch should be ticked (default: True)
         :param make_logs: (bool) should information, including losses should be logged (default: True)
         :param dump_latent: (bool) should all latent space representations be dumped after each batch (only cells within the split will be dumped)
-        :param log_prefix: (str) the prefix of the training log (for losses, this prefix will be added to )
+        :param log_prefix: (str) the prefix of the training log (for losses, this prefix will be added first to the item name in tensorboard and filename of latent embeddings)
+        :param latent_prefix: (str) the prefix to be added after log_prefix to latent embedding filename
         :return:
         """
 
@@ -315,7 +319,8 @@ class SAKRA(object):
             if selected_pheno is None:
                 selected_pheno = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_pheno}
                 warnings.warn(
-                    "Selecting all included phenotypes and linked losses and regularizations:" + str(selected_pheno))
+                    "(To silence, specify phenotype selection explicitly in the config file.) Selecting all included phenotypes and linked losses and regularizations:" + str(
+                        selected_pheno))
         else:
             if selected_pheno is not None:
                 raise ValueError(
@@ -325,13 +330,16 @@ class SAKRA(object):
             if selected_signature is None:
                 selected_signature = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_signature}
                 warnings.warn(
-                    "Selecting all included signatures and linked losses and regularizations: " + str(
+                    "(To silence, specify signature selection explicitly in the config file.) Selecting all included signatures and linked losses and regularizations: " + str(
                         selected_signature))
         else:
             if selected_signature is not None:
                 raise ValueError(
                     "Inconsistent training specification, specified signature to include in training but surpressed signature training.")
-
+        if batch_size is None:
+            warnings.warn(
+                "(To slience, specify batch_size explicitly in the config file.) Using default batch_size 50.")
+            batch_size = 50
 
         # Split mask
         selected_split_mask = self.splits[split_id]
@@ -340,7 +348,9 @@ class SAKRA(object):
         for cur_epoch in range(epoch):
             # Begin epoch
             if tick_controller_epoch:
-                self.controller.next_epoch()
+                self.controller.next_epoch(prog_main=train_main,
+                                           prog_pheno=train_pheno, selected_pheno=selected_pheno,
+                                           prog_signature=train_signature, selected_signature=selected_signature)
             # TODO: selective training
             # Set sampler
             sampler = torch.utils.data.BatchSampler(
@@ -377,7 +387,8 @@ class SAKRA(object):
                                                dump_pheno=True, selected_pheno=self.selected_pheno,
                                                dump_signature=True, selected_signature=self.selected_signature,
                                                rownames=self.count_data.gene_expr_mat.columns[selected_split_mask],
-                                               path=self.log_path+'/'+log_prefix+'_epoch_'+str(cur_epoch)+'_latent.csv')
+                                               path=self.log_path + '/' + log_prefix + latent_prefix + str(
+                                                   cur_epoch) + '_latent.csv')
 
     def test(self, split_id,
              test_main=True,
@@ -426,7 +437,8 @@ class SAKRA(object):
                        train_signature=(cur_story_item['train_signature'] == 'True'),
                        selected_pheno=cur_story_item.get('selected_pheno'),
                        selected_signature=cur_story_item.get('selected_signature'),
-                       epoch=cur_story_item['epochs'])
+                       epoch=cur_story_item['epochs'],
+                       batch_size=cur_story_item.get('batch_size'))
 
 
 if __name__ == '__main__':
