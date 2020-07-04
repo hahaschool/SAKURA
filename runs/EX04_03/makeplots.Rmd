@@ -1,0 +1,198 @@
+---
+title: "Make run summary plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+require(dplyr)
+require(magrittr)
+options(stringsAsFactors = FALSE)
+getwd()
+```
+
+# Configuration
+
+```{r paths}
+emb_path <- './runs/EX04_03/logs'
+pheno_df_path <- './dataset/PUMC_mouse_cardio/TAC_cell_info_191024.csv'
+expr_mat_path <- './dataset/PUMC_mouse_cardio/TAC_cell_umi_191024.csv'
+expr_mat_SCT_path <- './dataset/PUMC_mouse_cardio/sctransform_poission_res.csv.gz'
+```
+
+# Import Labels
+
+```{r import labels}
+pheno_df <- read.csv(pheno_df_path)
+expr_mat <- read.csv(expr_mat_path)
+expr_sct_mat <- read.csv(expr_mat_SCT_path)
+```
+
+# Make Embedding Plots
+
+```{r global configs}
+total_epochs <- 120
+```
+
+## Main latent plots (main.1 and main.2)
+
+
+```{r main latent plots}
+try({
+      keys_to_plot <- c("all_cell_all_latent", "overall_test_all_latent", "overall_train_all_latent")
+      output_width <- 5
+      output_height <- 5
+      for (i in 1:total_epochs) {
+        for (cur_key in keys_to_plot) {
+          emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+          cur_emb <- read.csv(emb_filename) %>%
+            rename('ID' = 'X') %>%
+            left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
+          plt <- ggplot(cur_emb) +
+            geom_point(aes(x = main.1, y = main.2, color = bigClass)) +
+            theme_classic() +
+            theme(legend.position = 'bottom')
+
+          plt_path <- './runs/EX04_03/plots/main_lat'
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+        }
+      }
+    })
+```
+
+```{r bigClass plots}
+try({
+      keys_to_plot <- c("bigClass_train_all_latent", "bigClass_test_all_latent")
+      output_width <- 5
+      output_height <- 5
+      for (i in 115:total_epochs) {
+        for (cur_key in keys_to_plot) {
+          emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+          cur_emb <- read.csv(emb_filename) %>%
+            rename('ID' = 'X') %>%
+            left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
+          plt <- ggplot(cur_emb) +
+            geom_density(aes(x = bigClass.1, color = bigClass)) +
+            theme_classic() +
+            theme(legend.position = 'bottom')
+
+          plt_path <- './runs/EX04_03/plots/bigClass_lat'
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+        }
+      }
+    })
+```
+
+```{r}
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./test_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = main.1, y = main.2, color = bigClass))
+        ggsave(plt, filename = paste0('./plt_test_main_', i, '.png'))
+      }
+    })
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./test_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = bigClass.1, y = CM.1, color = bigClass))
+        ggsave(plt, filename = paste0('./plt_test_bigClass_CM_', i, '.png'))
+      }
+    })
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./test_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = condition.1, y = bigClass.1, color = bigClass, shape = condition))
+        ggsave(plt, filename = paste0('./plt_test_bigClass_condition_', i, '.png'))
+      }
+    })
+
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./test_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = condition.1, y = bigClass.1, color = condition, shape = bigClass))
+        ggsave(plt, filename = paste0('./plt_test_condition_bigClass_', i, '.png'))
+      }
+    })
+
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./train_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = main.1, y = main.2, color = bigClass))
+        ggsave(plt, filename = paste0('./plt_train_main_', i, '.png'))
+      }
+    })
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./train_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = bigClass.1, y = CM.1, color = bigClass))
+        ggsave(plt, filename = paste0('./plt_train_bigClass_CM_', i, '.png'))
+      }
+    })
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./train_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = condition.1, y = bigClass.1, color = bigClass, shape = condition))
+        ggsave(plt, filename = paste0('./plt_train_bigClass_condition_', i, '.png'))
+      }
+    })
+
+try({
+      for (i in 0:49) {
+        cur_emb <- read.csv(paste0('./train_epoch_', i, '_latent.csv')) %>%
+          rename("ID" = 'X') %>%
+          left_join(y = pheno_df %>% select(ID, bigClass, condition, group, location), by = "ID")
+        cur_emb %>% set_rownames(cur_emb$ID)
+        plt <- ggplot(cur_emb) + geom_point(aes(x = condition.1, y = bigClass.1, color = condition, shape = bigClass))
+        ggsave(plt, filename = paste0('./plt_train_condition_bigClass_', i, '.png'))
+      }
+    })
+```
+
+
+## 3-D Plots
+
+```{r}
+require(plotly)
+for (i in 50:50) {
+  cur_emb <- read.csv(paste0('./', i, '.csv')) %>% left_join(y = pheno_df %>% select(ID, bigClass, condition, location, group), by = "ID")
+  cur_emb %>% set_rownames(cur_emb$ID)
+  plt_XY_bigClass <- plot_ly(cur_emb, x = ~X, y = ~Y, z = ~bigClass.x, color = ~bigClass.y, hovertext = ~condition.y)
+  plt_XY_condition <- plot_ly(cur_emb, x = ~X, y = ~Y, z = ~condition.x, color = ~condition.y, hovertext = ~bigClass.y)
+  plt_XY_location <- plot_ly(cur_emb, x = ~X, y = ~Y, z = ~location.x, color = ~location.y, hovertext = ~bigClass.y)
+  plt_XY_group <- plot_ly(cur_emb, x = ~X, y = ~Y, z = ~group.x, color = ~group.y, hovertext = ~bigClass.y)
+  plt_XY_condition_colorby_group <- plot_ly(cur_emb, x = ~X, y = ~Y, z = ~condition.x, color = ~paste0(group.y, '_', bigClass.y), hovertext = ~bigClass.y)
+  plt_XY_bigClass_colorby_group <- plot_ly(cur_emb, x = ~X, y = ~Y, z = ~bigClass.x, color = ~paste0(group.y, '_', bigClass.y), hovertext = ~bigClass.y)
+  plt_bigClass_location_group <- plot_ly(cur_emb, x = ~bigClass.x, y = ~location.x, z = ~group.x, color = ~paste0(bigClass.y, '_', location.y, '_', group.y))
+  plt_bigClass_condition_group <- plot_ly(cur_emb, x = ~bigClass.x, y = ~condition.x, z = ~group.x, color = ~paste0(bigClass.y, '_', condition.y, '_', group.y))
+  plt_bigClass_condition_location <- plot_ly(cur_emb, x = ~bigClass.x, y = ~condition.x, z = ~location.x, color = ~paste0(bigClass.y, '_', condition.y, '_', location.y))
+}
+
+```
