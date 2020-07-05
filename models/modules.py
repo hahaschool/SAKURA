@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 def modulebuilder(cfg):
@@ -132,7 +131,7 @@ class FCRegressor(nn.Module):
     Model used for supervising expression levels for selected genes
     Use entire latent space as input, or designated dimension(s)
     """
-    def  __init__(self):
+    def __init__(self, input_dim, output_dim, config=None, hidden_neurons=5):
         super(FCRegressor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -140,13 +139,12 @@ class FCRegressor(nn.Module):
         self.model_list = nn.ModuleList()
         if self.config is None:
             # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> ReLU --> Output
-            self.hidden_neurons = 10
+            self.hidden_neurons = hidden_neurons
             self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
             self.model_list.append(nn.CELU())
             self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
             self.model_list.append(nn.CELU())
             self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
-            self.model_list.append(nn.ReLU())
         else:
             self.model_list = modulebuilder(self.config)
         self.model = nn.Sequential(self.model_list)
@@ -194,9 +192,8 @@ class LinRegressor(nn.Module):
         self.config = config
         self.model_list = nn.ModuleList()
         if self.config is None:
-            # Input --> Linear --> ReLU --> Output
+            # Input --> Linear --> Output
             self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
-            self.model_list.append(nn.ReLU())
         else:
             self.model_list = modulebuilder(self.config)
 

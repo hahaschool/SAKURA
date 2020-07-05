@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_01/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_01/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_03/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_03/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_04/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_04/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_05/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX04_05/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_01/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_02/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_02/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_03/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_03/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_04/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_04/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_05/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_05/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_07/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX05_07/plots" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="R User Library" level="project" />
@@ -9,8 +29,5 @@
   </component>
   <component name="PyDocumentationSettings">
     <option name="renderExternalDocumentation" value="true" />
-  </component>
-  <component name="TestRunnerService">
-    <option name="PROJECT_TEST_RUNNER" value="Unittests" />
   </component>
 </module>

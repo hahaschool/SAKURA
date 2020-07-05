@@ -1,0 +1,75 @@
+{
+    "bigClass": {
+        "pheno_df_key": "bigClass",
+        "type": "categorical",
+        "order": [
+            "CM",
+            "EC",
+            "FB",
+            "MP"
+        ],
+        "pheno_lat_dim": 1,
+        "pheno_out_dim": 4,
+        "loss": {
+            "NLL": {
+                "type": "NLL",
+                "init_weight": 1.0,
+                "progressive_start_epoch": 10,
+                "progressive_const": 1.0
+            }
+        },
+        "pre_procedure": [],
+        "post_procedure": [
+            {
+                "type": "ToOrdinal"
+            },
+            {
+                "type": "ToTensor"
+            }
+        ],
+        "init_weight": 1.0,
+        "progressive_start_epoch": 10,
+        "progressive_const": 1.0,
+        "split": {
+            "type": "auto",
+            "base": "overall_train",
+            "train_dec": 2,
+            "seed": 810893
+        },
+        "regularization": {
+            "shape_uniform_supervised": {
+                "type": "SW2_uniform_supervised",
+                "SW2_num_projections": 50,
+                "uniform_low": -2.5,
+                "uniform_high": 2.5,
+                "uniform_n_labels": 4,
+                "uniform_label_offsets": [
+                    [
+                        -7.5
+                    ],
+                    [
+                        -2.5
+                    ],
+                    [
+                        2.5
+                    ],
+                    [
+                        7.5
+                    ]
+                ],
+                "progressive_const": 1.01,
+                "progressive_start_epoch": 1,
+                "init_weight": 1.0
+            },
+            "shape_uniform_unsupervised": {
+                "type": "SW2_uniform",
+                "SW2_num_projections": 50,
+                "uniform_low": -10,
+                "uniform_high": 10,
+                "progressive_const": 1.1,
+                "progressive_start_epoch": 1,
+                "init_weight": 0.1
+            }
+        }
+    }
+}

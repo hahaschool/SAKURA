@@ -1,0 +1,301 @@
+---
+title: "Make run summary plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+require(dplyr)
+require(magrittr)
+require(reshape2)
+require(ggExtra)
+options(stringsAsFactors = FALSE)
+getwd()
+```
+
+# Configuration
+
+```{r paths}
+emb_path <- './runs/EX05_07/logs'
+pheno_df_path <- './dataset/PUMC_mouse_cardio/TAC_cell_info_191024.csv'
+expr_mat_path <- './dataset/PUMC_mouse_cardio/TAC_cell_umi_191024.csv'
+expr_mat_SCT_path <- './dataset/PUMC_mouse_cardio/sctransform_poission_res.csv.gz'
+```
+
+# Import Labels
+
+```{r import labels}
+pheno_df <- read.csv(pheno_df_path)
+expr_mat <- read.csv(expr_mat_path)
+expr_sct_mat <- read.csv(expr_mat_SCT_path) %>% t()
+colnames(expr_sct_mat) <- expr_sct_mat[1,]
+expr_sct_mat <- expr_sct_mat[-1,]
+```
+
+# Make Embedding Plots
+
+```{r global configs}
+total_epochs <- 50
+```
+
+## Main latent plots (main.1 and main.2)
+
+
+```{r signature latent plots}
+try({
+      keys_to_plot <- c("overall_test_all_latent", "overall_train_all_latent")
+      output_width <- 5
+      output_height <- 5
+      for (i in 40:total_epochs) {
+        for (cur_key in keys_to_plot) {
+          emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+          cur_emb <- read.csv(emb_filename) %>%
+                  rename('ID' = 'X') %>%
+                  left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
+
+          plt <- ggplot(cur_emb) +
+                  geom_point(aes(x = CM.1, y = MP.1, color = bigClass)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom') +
+                  coord_cartesian(xlim = quantile(cur_emb$CM.1, c(0.01, 0.99)),
+                                  ylim = quantile(cur_emb$MP.1, c(0.01, 0.99)))
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+          plt_path <- './runs/EX05_07/plots/signature_lat'
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_CM_MP.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_point(aes(x = CM.1, y = FB.1, color = bigClass)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom') +
+                  coord_cartesian(xlim = quantile(cur_emb$CM.1, c(0.01, 0.99)),
+                                  ylim = quantile(cur_emb$FB.1, c(0.01, 0.99)))
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_CM_FB.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_point(aes(x = MP.1, y = EC.1, color = bigClass)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom') +
+                  coord_cartesian(xlim = quantile(cur_emb$MP.1, c(0.01, 0.99)),
+                                  ylim = quantile(cur_emb$EC.1, c(0.01, 0.99)))
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_MP_EC.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_point(aes(x = EC.1, y = FB.1, color = bigClass)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom') +
+                  coord_cartesian(xlim = quantile(cur_emb$EC.1, c(0.01, 0.99)),
+                                  ylim = quantile(cur_emb$FB.1, c(0.01, 0.99)))
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_EC_FB.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_point(aes(x = main.1, y = main.2, color = bigClass)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom') +
+                  coord_cartesian(xlim = quantile(cur_emb$main.1, c(0.01, 0.99)),
+                                  ylim = quantile(cur_emb$main.2, c(0.01, 0.99)))
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_X_Y.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+
+        }
+      }
+    })
+```
+
+```{r signature distrib}
+try({
+      keys_to_plot <- c("overall_test_all_latent", "overall_train_all_latent")
+      output_width <- 5
+      output_height <- 5
+      for (i in 40:total_epochs) {
+        for (cur_key in keys_to_plot) {
+          emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+          cur_emb <- read.csv(emb_filename) %>%
+                  rename('ID' = 'X') %>%
+                  left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = EC.1, color = bigClass == 'EC')) +
+                  geom_density(aes(x = EC.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+          plt_path <- './runs/EX05_07/plots/signature_distrib'
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_EC.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = MP.1, color = bigClass == 'MP')) +
+                  geom_density(aes(x = MP.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_MP.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = FB.1, color = bigClass == 'FB')) +
+                  geom_density(aes(x = FB.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_FB.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = CM.1, color = bigClass == 'CM')) +
+                  geom_density(aes(x = CM.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_CM.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = T.1, color = bigClass == 'T')) +
+                  geom_density(aes(x = T.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_T.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = main.1, color = bigClass)) +
+                  geom_density(aes(x = main.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_main_1.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = main.2, color = bigClass)) +
+                  geom_density(aes(x = main.2)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_main_2.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+          plt <- ggplot(cur_emb) +
+                  geom_density(aes(x = GN.1, color = bigClass == 'GN')) +
+                  geom_density(aes(x = GN.1)) +
+                  theme_classic() +
+                  theme(legend.position = 'bottom')
+
+
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_GN.jpg')
+
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+        }
+      }
+    })
+```
+
+```{r signature gene content}
+keys_to_plot <- c("overall_test_all_latent", "overall_train_all_latent")
+signatures_to_plot <- c("CM", "MP", "EC", "FB", "T", "GN")
+signature_genes <- list()
+signature_genes[["CM"]] <- c("Tnnt2", "Actn2", "Myh6", "Myh7", "Tnni3")
+signature_genes[["MP"]] <- c("Cd68", "Csf1r", "Cd163", "C5ar1", "Mrc1")
+signature_genes[["EC"]] <- c("Cdh5", "Vwf", "Kdr", "Eng", "Pecam1")
+signature_genes[["FB"]] <- c("Fn1", "Vim", "Pdgfra")
+signature_genes[["T"]] <- c("Ptprc", "Cd3d", "Cd2", "Cd4", "Cd8a", "Cd3e")
+signature_genes[["GN"]] <- c("S100a8", "S100a9", "Csf3r")
+output_width <- 10
+output_height <- 10
+for (i in 45:50) {
+  for (cur_key in keys_to_plot) {
+    for (cur_signature in signatures_to_plot) {
+      emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+
+      cur_emb <- read.csv(emb_filename) %>%
+              rename('ID' = 'X') %>%
+              left_join(y = pheno_df %>% select(ID, bigClass, res.1, ident), by = 'ID')
+
+      cur_expr_mat <- expr_sct_mat[cur_emb$ID, colnames(expr_sct_mat) %in% signature_genes[[cur_signature]]]
+      class(cur_expr_mat) <- "numeric"
+
+      cur_emb <- cbind(cur_emb, cur_expr_mat) %>%
+              melt(id.vars = c("ID", paste0(cur_signature, ".1"), "bigClass"), measure.vars = signature_genes[[cur_signature]]) %>%
+              rename('sgn_score' = paste0(cur_signature, '.1'))
+
+      plt <- ggplot(cur_emb) +
+              ggtitle(paste(cur_key, "epoch", i, cur_signature)) +
+              xlab(cur_signature) +
+              geom_point(aes(x = sgn_score, y = value, color = bigClass, alpha = bigClass == cur_signature)) +
+              geom_density2d(data = cur_emb %>% filter(value > 0), aes(x = sgn_score, y = value), color = "lightgrey") +
+              geom_rug(data = cur_emb %>% filter(value > 0), aes(x = sgn_score, y = value), alpha = 0.1) +
+              facet_wrap(~variable) +
+              geom_hline(yintercept = 0, linetype = 'dashed') +
+              theme_classic() +
+              theme(legend.position = 'bottom') +
+              coord_cartesian(xlim = quantile(cur_emb$sgn_score, c(0.01, 0.99)),
+                              ylim = quantile(cur_emb$value, c(0.01, 0.99)))
+
+      plt_path <- './runs/EX05_07/plots/signature_detail'
+      system(paste0("mkdir -p ", plt_path))
+      plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_', cur_signature, '.pdf')
+      ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+
+    }
+  }
+}
+
+```
+
+## 3-D Plots
+
+```{r}
+require(plotly)
+require(htmlwidgets)
+try({
+      keys_to_plot <- c("bigClass_train_all_latent", "bigClass_test_all_latent")
+      for (i in 20:20) {
+        for (cur_key in keys_to_plot[1]) {
+          emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+          cur_emb <- read.csv(emb_filename) %>%
+                  rename('ID' = 'X') %>%
+                  left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
+          plt <- plot_ly(cur_emb, x = ~main.1, y = ~main.2, z = ~bigClass.1, color = ~bigClass)
+
+
+        }
+      }
+    })
+
+```

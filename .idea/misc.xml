@@ -35,6 +35,55 @@
             </RMarkdownRenderProfile>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_01/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX05_01" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_02/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX05_02" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_03/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX05_03" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_04/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_05/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX05_05" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_06/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX05_06" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/runs/EX05_07/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX05_07" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
