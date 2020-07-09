@@ -8,8 +8,6 @@ knitr::opts_chunk$set(echo = TRUE)
 require(ggplot2)
 require(dplyr)
 require(magrittr)
-require(reshape2)
-require(ggExtra)
 options(stringsAsFactors = FALSE)
 getwd()
 ```
@@ -17,7 +15,7 @@ getwd()
 # Configuration
 
 ```{r paths}
-emb_path <- './runs/EX05_07/logs'
+emb_path <- './runs/EX05_04/logs'
 pheno_df_path <- './dataset/PUMC_mouse_cardio/TAC_cell_info_191024.csv'
 expr_mat_path <- './dataset/PUMC_mouse_cardio/TAC_cell_umi_191024.csv'
 expr_mat_SCT_path <- './dataset/PUMC_mouse_cardio/sctransform_poission_res.csv.gz'
@@ -28,15 +26,13 @@ expr_mat_SCT_path <- './dataset/PUMC_mouse_cardio/sctransform_poission_res.csv.g
 ```{r import labels}
 pheno_df <- read.csv(pheno_df_path)
 expr_mat <- read.csv(expr_mat_path)
-expr_sct_mat <- read.csv(expr_mat_SCT_path) %>% t()
-colnames(expr_sct_mat) <- expr_sct_mat[1,]
-expr_sct_mat <- expr_sct_mat[-1,]
+expr_sct_mat <- read.csv(expr_mat_SCT_path)
 ```
 
 # Make Embedding Plots
 
 ```{r global configs}
-total_epochs <- 50
+total_epochs <- 120
 ```
 
 ## Main latent plots (main.1 and main.2)
@@ -47,7 +43,7 @@ try({
       keys_to_plot <- c("overall_test_all_latent", "overall_train_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 40:total_epochs) {
+      for (i in 30:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -57,11 +53,9 @@ try({
           plt <- ggplot(cur_emb) +
                   geom_point(aes(x = CM.1, y = MP.1, color = bigClass)) +
                   theme_classic() +
-                  theme(legend.position = 'bottom') +
-                  coord_cartesian(xlim = quantile(cur_emb$CM.1, c(0.01, 0.99)),
-                                  ylim = quantile(cur_emb$MP.1, c(0.01, 0.99)))
+                  theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- './runs/EX05_07/plots/signature_lat'
+          plt_path <- './runs/EX05_04/plots/signature_lat'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_CM_MP.jpg')
 
@@ -70,9 +64,7 @@ try({
           plt <- ggplot(cur_emb) +
                   geom_point(aes(x = CM.1, y = FB.1, color = bigClass)) +
                   theme_classic() +
-                  theme(legend.position = 'bottom') +
-                  coord_cartesian(xlim = quantile(cur_emb$CM.1, c(0.01, 0.99)),
-                                  ylim = quantile(cur_emb$FB.1, c(0.01, 0.99)))
+                  theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
 
           system(paste0('mkdir -p ', plt_path))
@@ -83,9 +75,7 @@ try({
           plt <- ggplot(cur_emb) +
                   geom_point(aes(x = MP.1, y = EC.1, color = bigClass)) +
                   theme_classic() +
-                  theme(legend.position = 'bottom') +
-                  coord_cartesian(xlim = quantile(cur_emb$MP.1, c(0.01, 0.99)),
-                                  ylim = quantile(cur_emb$EC.1, c(0.01, 0.99)))
+                  theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_MP_EC.jpg')
@@ -95,24 +85,10 @@ try({
           plt <- ggplot(cur_emb) +
                   geom_point(aes(x = EC.1, y = FB.1, color = bigClass)) +
                   theme_classic() +
-                  theme(legend.position = 'bottom') +
-                  coord_cartesian(xlim = quantile(cur_emb$EC.1, c(0.01, 0.99)),
-                                  ylim = quantile(cur_emb$FB.1, c(0.01, 0.99)))
+                  theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_EC_FB.jpg')
-
-          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
-
-          plt <- ggplot(cur_emb) +
-                  geom_point(aes(x = main.1, y = main.2, color = bigClass)) +
-                  theme_classic() +
-                  theme(legend.position = 'bottom') +
-                  coord_cartesian(xlim = quantile(cur_emb$main.1, c(0.01, 0.99)),
-                                  ylim = quantile(cur_emb$main.2, c(0.01, 0.99)))
-          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          system(paste0('mkdir -p ', plt_path))
-          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_X_Y.jpg')
 
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
 
@@ -127,7 +103,7 @@ try({
       keys_to_plot <- c("overall_test_all_latent", "overall_train_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 40:total_epochs) {
+      for (i in 30:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -139,7 +115,7 @@ try({
                   theme_classic() +
                   theme(legend.position = 'bottom')
 
-          plt_path <- './runs/EX05_07/plots/signature_distrib'
+          plt_path <- './runs/EX05_04/plots/signature_distrib'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_EC.jpg')
 
@@ -238,8 +214,8 @@ signature_genes[["T"]] <- c("Ptprc", "Cd3d", "Cd2", "Cd4", "Cd8a", "Cd3e")
 signature_genes[["GN"]] <- c("S100a8", "S100a9", "Csf3r")
 output_width <- 10
 output_height <- 10
-for (i in 45:50) {
-  for (cur_key in keys_to_plot) {
+for (i in 50:50) {
+  for (cur_key in keys_to_plot[2]) {
     for (cur_signature in signatures_to_plot) {
       emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
 
@@ -258,7 +234,7 @@ for (i in 45:50) {
               ggtitle(paste(cur_key, "epoch", i, cur_signature)) +
               xlab(cur_signature) +
               geom_point(aes(x = sgn_score, y = value, color = bigClass, alpha = bigClass == cur_signature)) +
-              geom_density2d(data = cur_emb %>% filter(value > 0), aes(x = sgn_score, y = value), color = "lightgrey") +
+              geom_density2d(data = cur_emb %>% filter(value > 0), aes(x = sgn_score, y = value)) +
               geom_rug(data = cur_emb %>% filter(value > 0), aes(x = sgn_score, y = value), alpha = 0.1) +
               facet_wrap(~variable) +
               geom_hline(yintercept = 0, linetype = 'dashed') +
@@ -266,11 +242,7 @@ for (i in 45:50) {
               theme(legend.position = 'bottom') +
               coord_cartesian(xlim = quantile(cur_emb$sgn_score, c(0.01, 0.99)),
                               ylim = quantile(cur_emb$value, c(0.01, 0.99)))
-
-      plt_path <- './runs/EX05_07/plots/signature_detail'
-      system(paste0("mkdir -p ", plt_path))
-      plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_', cur_signature, '.pdf')
-      ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+      plot(plt)
 
     }
   }
@@ -284,14 +256,14 @@ for (i in 45:50) {
 require(plotly)
 require(htmlwidgets)
 try({
-      keys_to_plot <- c("overall_train_all_latent")
-      for (i in 50:50) {
+      keys_to_plot <- c("bigClass_train_all_latent", "bigClass_test_all_latent")
+      for (i in total_epochs:total_epochs) {
         for (cur_key in keys_to_plot[1]) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
                   rename('ID' = 'X') %>%
                   left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
-          plt <- plot_ly(cur_emb, x = ~main.1, y = ~main.2, z = ~FB.1, color = ~bigClass)
+          plt <- plot_ly(cur_emb, x = ~main.1, y = ~main.2, z = ~bigClass.1, color = ~bigClass)
 
 
         }

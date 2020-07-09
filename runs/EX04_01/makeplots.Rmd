@@ -8,6 +8,8 @@ knitr::opts_chunk$set(echo = TRUE)
 require(ggplot2)
 require(dplyr)
 require(magrittr)
+require(reshape2)
+require(ggExtra)
 options(stringsAsFactors = FALSE)
 getwd()
 ```
@@ -25,8 +27,10 @@ expr_mat_SCT_path <- './dataset/PUMC_mouse_cardio/sctransform_poission_res.csv.g
 
 ```{r import labels}
 pheno_df <- read.csv(pheno_df_path)
-expr_mat <- read.csv(expr_mat_path)
-expr_sct_mat <- read.csv(expr_mat_SCT_path)
+expr_mat <- read.csv(expr_mat_path) %>% t
+expr_sct_mat <- read.csv(expr_mat_SCT_path) %>% t()
+colnames(expr_sct_mat) <- expr_sct_mat[1,]
+expr_sct_mat <- expr_sct_mat[-1,]
 ```
 
 # Make Embedding Plots
@@ -43,7 +47,7 @@ try({
       keys_to_plot <- c("all_cell_all_latent", "overall_test_all_latent", "overall_train_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 1:total_epochs) {
+      for (i in 60:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -53,6 +57,7 @@ try({
             geom_point(aes(x = main.1, y = main.2, color = bigClass)) +
             theme_classic() +
             theme(legend.position = 'bottom')
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
 
           plt_path <- './runs/EX04_01/plots/main_lat'
           system(paste0('mkdir -p ', plt_path))
@@ -69,14 +74,15 @@ try({
       keys_to_plot <- c("bigClass_train_all_latent", "bigClass_test_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 1:total_epochs) {
+      for (i in total_epochs:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
             rename('ID' = 'X') %>%
             left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
           plt <- ggplot(cur_emb) +
-            geom_point(aes(x = main.1, y = bigClass.1, color = bigClass)) +
+            geom_density(aes(x = bigClass.1, color = bigClass)) +
+            geom_density(aes(x = bigClass.1)) +
             theme_classic() +
             theme(legend.position = 'bottom')
 

@@ -1,0 +1,293 @@
+{
+  "CM": {
+    "signature_list": [
+      "Tnnt2",
+      "Actn2",
+      "Myh6",
+      "Myh7",
+      "Tnni3"
+    ],
+    "exclude_from_input": "False",
+    "signature_lat_dim": 1,
+    "signature_out_dim": 5,
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "auto",
+      "base": "overall_train",
+      "train_dec": 8,
+      "seed": 764764
+    },
+    "loss": {
+      "regression_MSE": {
+        "type": "MSE",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      },
+      "regression_L1": {
+        "type": "L1",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      }
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.3
+      }
+    }
+  },
+  "EC": {
+    "signature_list": [
+      "Cdh5",
+      "Vwf",
+      "Kdr",
+      "Eng",
+      "Pecam1"
+    ],
+    "exclude_from_input": "False",
+    "signature_lat_dim": 1,
+    "signature_out_dim": 5,
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "auto",
+      "base": "overall_train",
+      "train_dec": 8,
+      "seed": 764764
+    },
+    "loss": {
+      "regression_MSE": {
+        "type": "MSE",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      },
+      "regression_L1": {
+        "type": "L1",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      }
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.3
+      }
+    }
+  },
+  "FB": {
+    "signature_list": [
+      "Fn1",
+      "Vim",
+      "Pdgfra"
+    ],
+    "exclude_from_input": "False",
+    "signature_lat_dim": 1,
+    "signature_out_dim": 3,
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "auto",
+      "base": "overall_train",
+      "train_dec": 8,
+      "seed": 764764
+    },
+    "loss": {
+      "regression_MSE": {
+        "type": "MSE",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      },
+      "regression_L1": {
+        "type": "L1",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      }
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.3
+      }
+    }
+  },
+  "MP": {
+    "signature_list": [
+      "Cd68",
+      "Csf1r",
+      "Cd163",
+      "C5ar1",
+      "Mrc1"
+    ],
+    "exclude_from_input": "False",
+    "signature_lat_dim": 1,
+    "signature_out_dim": 5,
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "auto",
+      "base": "overall_train",
+      "train_dec": 8,
+      "seed": 764764
+    },
+    "loss": {
+      "regression_MSE": {
+        "type": "MSE",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      },
+      "regression_L1": {
+        "type": "L1",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      }
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.3
+      }
+    }
+  },
+  "T": {
+    "signature_list": [
+      "Ptprc",
+      "Cd3d",
+      "Cd2",
+      "Cd4",
+      "Cd8a",
+      "Cd3e"
+    ],
+    "exclude_from_input": "False",
+    "signature_lat_dim": 1,
+    "signature_out_dim": 6,
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "auto",
+      "base": "overall_train",
+      "train_dec": 8,
+      "seed": 764764
+    },
+    "loss": {
+      "regression_MSE": {
+        "type": "MSE",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      },
+      "regression_L1": {
+        "type": "L1",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      }
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.3
+      }
+    }
+  },
+  "GN": {
+    "signature_list": [
+      "S100a8",
+      "S100a9",
+      "Csf3r"
+    ],
+    "exclude_from_input": "False",
+    "signature_lat_dim": 1,
+    "signature_out_dim": 3,
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "auto",
+      "base": "overall_train",
+      "train_dec": 8,
+      "seed": 764764
+    },
+    "loss": {
+      "regression_MSE": {
+        "type": "MSE",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      },
+      "regression_L1": {
+        "type": "L1",
+        "progressive_const": 1.0,
+        "progressive_start_epoch": 20,
+        "init_weight": 1.0
+      }
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.3
+      }
+    }
+  }
+}

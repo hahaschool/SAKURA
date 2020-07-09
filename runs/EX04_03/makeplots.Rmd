@@ -37,13 +37,12 @@ total_epochs <- 120
 
 ## Main latent plots (main.1 and main.2)
 
-
 ```{r main latent plots}
 try({
       keys_to_plot <- c("all_cell_all_latent", "overall_test_all_latent", "overall_train_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 1:total_epochs) {
+      for (i in 60:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -53,6 +52,7 @@ try({
             geom_point(aes(x = main.1, y = main.2, color = bigClass)) +
             theme_classic() +
             theme(legend.position = 'bottom')
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
 
           plt_path <- './runs/EX04_03/plots/main_lat'
           system(paste0('mkdir -p ', plt_path))
@@ -69,7 +69,7 @@ try({
       keys_to_plot <- c("bigClass_train_all_latent", "bigClass_test_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 115:total_epochs) {
+      for (i in total_epochs:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -77,6 +77,7 @@ try({
             left_join(y = pheno_df %>% select(ID, bigClass), by = 'ID')
           plt <- ggplot(cur_emb) +
             geom_density(aes(x = bigClass.1, color = bigClass)) +
+            geom_density(aes(x = bigClass.1)) +
             theme_classic() +
             theme(legend.position = 'bottom')
 

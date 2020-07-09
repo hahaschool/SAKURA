@@ -40,10 +40,10 @@ total_epochs <- 120
 
 ```{r main latent plots}
 try({
-      keys_to_plot <- c("bigClass_train_all_latent", "bigClass_test_all_latent") # c("all_cell_all_latent", "overall_test_all_latent", "overall_train_all_latent")
+      keys_to_plot <- c("all_cell_all_latent", "overall_test_all_latent", "overall_train_all_latent")
       output_width <- 5
       output_height <- 5
-      for (i in 1:total_epochs) {
+      for (i in 120:total_epochs) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -53,6 +53,7 @@ try({
             geom_point(aes(x = main.1, y = main.2, color = bigClass)) +
             theme_classic() +
             theme(legend.position = 'bottom')
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
 
           plt_path <- './runs/EX04_04/plots/main_lat'
           system(paste0('mkdir -p ', plt_path))
