@@ -10,6 +10,7 @@ import torch.optim
 import torch.utils.data
 
 from dataset import rna_count
+from dataset import rna_count_sparse
 from model_controllers.extractor_controller import ExtractorController
 from models.extractor import Extractor
 from utils.data_splitter import DataSplitter
@@ -53,7 +54,7 @@ class SAKRA(object):
                 torch.backends.cudnn.benchmark=False
                 torch.backends.cudnn.deterministic=True
 
-        # Dataset
+        # Dataset (main part)
         if self.config['dataset']['type'] == 'rna_count':
             self.expr_csv_path = self.config['dataset'].get('expr_csv_path')
             self.pheno_csv_path = self.config['dataset'].get('pheno_csv_path')
@@ -67,7 +68,27 @@ class SAKRA(object):
                                                           pheno_meta_json_path=self.pheno_meta_path,
                                                           mode='all',
                                                           verbose=self.verbose)
+        elif self.config['dataset']['type'] == 'rna_count_sparse':
+            # Persist arguments
+            self.gene_expr_MM_path = self.config['dataset'].get('gene_expr_MM_path')
+            self.gene_name_csv_path = self.config['dataset'].get('gene_name_csv_path')
+            self.cell_name_csv_path = self.config['dataset'].get('cell_name_csv_path')
+            self.pheno_csv_path = self.config['dataset'].get('pheno_csv_path')
+            self.pheno_meta_path = self.config['dataset'].get('pheno_meta_path')
+            self.signature_config_path = self.config['dataset'].get('signature_config_path')
 
+            self.count_data = rna_count_sparse.SCRNASeqCountDataSparse(gene_MM_path=self.gene_expr_MM_path,
+                                                                       gene_name_csv_path=self.gene_name_csv_path,
+                                                                       cell_name_csv_path=self.cell_name_csv_path,
+                                                                       pheno_csv_path=self.pheno_csv_path,
+                                                                       pheno_meta_json_path=self.pheno_meta_path,
+                                                                       mode='all',
+                                                                       verbose=self.verbose)
+        else:
+            raise ValueError('Unrecognized dataset type')
+
+        # Dataset (Phenotype and Signature)
+        if self.config['dataset']['type'] == 'rna_count' or self.config['dataset']['type'] == 'rna_count_sparse':
             # Selecting phenotypes and signatures to be used
             self.selected_pheno = self.config['dataset'].get('selected_pheno')
             if self.selected_pheno is None:
@@ -112,9 +133,16 @@ class SAKRA(object):
                     'post_procedure': [{'type': 'ToTensor'}]
                 }
 
+            # For sparse data, perform pre-slice to optimize performance
+            if self.config['dataset']['type'] == 'rna_count_sparse':
+                if self.config['dataset']['expr_mat_pre_slice'] == 'True':
+                    self.count_data.expr_set_pre_slice()
+
             # Perform integrity check
             if self.integrity_check() is False:
-                raise ValueError
+                raise ValueError('Integrity check failed, see console log for details')
+        else:
+            raise ValueError('Unsupported dataset type')
 
         # Generate splits
         self.generate_splits()

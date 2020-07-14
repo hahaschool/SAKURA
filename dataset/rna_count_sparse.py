@@ -2,6 +2,9 @@ import json
 
 import numpy as np
 import pandas as pd
+import scipy
+import scipy.io
+import scipy.sparse
 from torch.utils.data import Dataset
 
 from utils.data_transformations import ToKBins
@@ -11,67 +14,22 @@ from utils.data_transformations import ToOrdinal
 from utils.data_transformations import ToTensor
 
 
-class SCRNASeqCountData(Dataset):
-    """
-    General scRNA-Seq Count Dataset
+class SCRNASeqCountDataSparse(Dataset):
+    "Accepts matrixMM (could be dgcmatrix in R) as data contained (will still load everything into memory, but using sparse matrix now)."
 
-    Input:
-    genotype_csv:
-        * Assuming rows are genes, colmuns are samples(/cells)
-        * rownames are gene identifiers (gene name, or ensembl ID)
-        * colnames are sample identifiers (cell name)
-    genotype_meta_csv:
-        * pre_procedure: transformations that will perform when *load* the dataset
-        * post_procedure: transformations that will perform when *export* requested samples
-    phenotype_csv:
-        * Assuming rows are samples, columns are metadata contents
-        * rownames are sample identifiers ()
-    phenotype_meta_csv:
-        * A json file to define Type, Range, and Order for phenotype columns
-        * Storage entity is a 'dict'
-        * Type: 'categorical', 'numeric', 'ordinal' (tbd)
-        * For 'categorical':
-            * Range: array of possible values, *ordered*
-        * pre_procedure
-        * post_procedure
-
-
-    Options:
-        * Mode
-
-    Modes:
-        * all
-        * sample_id
-        * expr
-        * pheno
-
-
-
-    Transformations:
-        * ToTensor:
-        * ToOneHot: transform categorical data to one-hot encoding, an order of classes should be specified, otherwise
-                    will use sorted labels, assuming the range of labels are from input
-        * ToOrdinal:
-        * ToKBins:
-        * LogNormalize:
-    """
-
-    """
-    Sample:
-    
-    
-    """
-
-    def __init__(self, gene_csv_path, pheno_csv_path,
+    def __init__(self, gene_MM_path, gene_name_csv_path, cell_name_csv_path,
+                 pheno_csv_path,
                  gene_meta_json_path=None, pheno_meta_json_path=None,
                  gene_meta=None, pheno_meta=None,
                  mode='all', verbose=False):
 
         # Verbose console logging
-        self.verbose=verbose
+        self.verbose = verbose
 
         # Persist argument list
-        self.gene_csv_path = gene_csv_path
+        self.gene_MM_path = gene_MM_path
+        self.gene_name_csv_path = gene_name_csv_path
+        self.cell_name_csv_path = cell_name_csv_path
         self.gene_meta_json_path = gene_meta_json_path
         self.pheno_csv_path = pheno_csv_path
         self.pheno_meta_json_path = pheno_meta_json_path
@@ -83,19 +41,40 @@ class SCRNASeqCountData(Dataset):
         self.to_ordinal = ToOrdinal()
         self.to_kbins = ToKBins()
 
-        # Read gene expression matrix
-        self._gene_expr_mat_orig = pd.read_csv(self.gene_csv_path, index_col=0, header=0)
+        # Read gene expression matrix (from MM .mtx file, as sparse matrix)
+        if verbose:
+            print("Loading expression matrix from mtx (MM) file.")
+        # Read sparse matrix and convert to csc_matrix
+        # csc_matrix is required by pandas, also efficient when cells are stored in column side
+        self._gene_expr_mat_orig = scipy.io.mmread(self.gene_MM_path)
+        # Read gene names
+        self.gene_names = pd.read_csv(self.gene_name_csv_path, index_col=0)
+        # Read cell names
+        self.cell_names = pd.read_csv(self.cell_name_csv_path, index_col=0)
+        # Build pandas sparse DataFrame
+        self._gene_expr_mat_orig = pd.DataFrame.sparse.from_spmatrix(data=self._gene_expr_mat_orig,
+                                                                     index=self.gene_names.iloc[:, 0],
+                                                                     columns=self.cell_names.iloc[:, 0])
+        self._gene_expr_mat_orig.columns.name = 'cell'
+        self._gene_expr_mat_orig.index.name = 'gene'
         self.gene_expr_mat = self._gene_expr_mat_orig.copy()
+
+        # Note that sparse dataframe is doing row slicing very slowly, so for each expression set,
+        # should pre-slice the whole sparse dataframe
 
         if self.verbose:
             print('==========================')
-            print('rna_count dataset:')
-            print("Imported gene expression matrix CSV from:", self.gene_csv_path)
+            print('rna_count dataset (sparse MM version):')
+            print("Imported gene expression matrix from:", self.gene_MM_path)
+            print("Imported gene names from:", self.gene_name_csv_path)
+            print("Imported cell names from:", self.cell_name_csv_path)
             print(self.gene_expr_mat.shape)
-            print(self.gene_expr_mat.head(3))
+            print(self.gene_expr_mat.iloc[:, 0:3])
 
         # Read gene expression matrix metadata
         self.gene_meta = gene_meta
+        self.flag_expr_set_pre_sliced = False
+        self.expr_mat_pre_sliced = dict()
         if self.gene_meta is None:
             self.gene_meta = {
                 "all": {
@@ -147,78 +126,43 @@ class SCRNASeqCountData(Dataset):
         if (self._gene_expr_mat_orig.columns.values != self._pheno_df_orig.index.values).any():
             raise ValueError
 
-    def subset_reset(self):
-        self.gene_expr_mat = self._gene_expr_mat_orig.copy()
-        self.pheno_df = self._pheno_df_orig.copy()
-        self.cell_list = self._cell_list_orig.copy()
-        return self
+    def expr_set_pre_slice(self):
+        self.flag_expr_set_pre_sliced = True
+        self.expr_mat_pre_sliced = dict()
+        for cur_expr_key in self.gene_meta.keys():
+            cur_expr_meta = self.gene_meta[cur_expr_key]
+            if type(cur_expr_meta['gene_list']) is list or type(cur_expr_meta['gene_list']) is np.ndarray:
+                self.expr_mat_pre_sliced[cur_expr_key] = self.gene_expr_mat.loc[cur_expr_meta['gene_list'], :].copy()
+            elif cur_expr_meta['gene_list'] == '*':
+                self.expr_mat_pre_sliced[cur_expr_key] = self.gene_expr_mat.copy()
+            elif cur_expr_meta['gene_list'] == '-':
+                self.expr_mat_pre_sliced[cur_expr_key] = self.gene_expr_mat.drop(cur_expr_meta['exclude_list'],
+                                                                                 axis=0).copy()
 
-    def subset_gene(self, gene_list, exclude_mode=False):
-        # Subset the dataset with selected genes
-        # e.g. subset HVG
-        if exclude_mode:
-            self.gene_expr_mat.drop(gene_list, axis=0, inplace=True)
-            if self.train_test_split_ratio is not None:
-                self.gene_expr_mat_test.drop(gene_list, axis=0, inplace=True)
-                self.gene_expr_mat_all.drop(gene_list, axis=0, inplace=True)
+    def __select_expr_mat(self, cur_expr_key, item):
+        cur_expr_mat = None
+        if self.flag_expr_set_pre_sliced:
+            # Select pre-sliced expression matrices
+            cur_expr_mat = self.expr_mat_pre_sliced[cur_expr_key].iloc[:, item].copy()
         else:
-            self.gene_expr_mat = self.gene_expr_mat.loc[gene_list, :]
-            if self.train_test_split_ratio is not None:
-                self.gene_expr_mat_test = self.gene_expr_mat_test.loc[gene_list, :]
-                self.gene_expr_mat_all = self.gene_expr_mat_all.loc[gene_list, :]
-        return self
-
-    def subset_pheno(self, pheno_list, exclude_mode=False):
-        # Return a pheno subsetted object (original data backuped)
-        if exclude_mode:
-            self.pheno_df.drop(pheno_list, axis=1, inplace=True)
-            if self.train_test_split_ratio is not None:
-                self.pheno_df_test.drop(pheno_list, axis=1, inplace=True)
-                self.pheno_df_all.drop(pheno_list, axis=1, inplace=True)
-        else:
-            self.pheno_df = self.pheno_df.loc[:, pheno_list]
-            if self.train_test_split_ratio is not None:
-                self.pheno_df_test = self.pheno_df_test.loc[:, pheno_list]
-                self.pheno_df_all = self.pheno_df_all.loc[:, pheno_list]
-        return self
-
-    def subset_cell(self, cell_list, exclude_mode=False):
-        # Return a cell subsetted object (original data backuped)
-        # Adapt type
-        if type(cell_list) is list:
-            cell_list = np.array(cell_list)
-        if exclude_mode:
-            self.gene_expr_mat.drop(cell_list, axis=1, inplace=True)
-            self.pheno_df.drop(cell_list, axis=0, inplace=True)
-            if self.train_test_split_ratio is not None:
-                self.gene_expr_mat_test.drop(cell_list, axis=1, inplace=True)
-                self.pheno_df_test.drop(cell_list, axis=0, inplace=True)
-                self.gene_expr_mat_all.drop(cell_list, axis=1, inplace=True)
-                self.pheno_df_all.drop(cell_list, axis=0, inplace=True)
-        else:
-            self.gene_expr_mat = self.gene_expr_mat.loc[:, cell_list]
-            self.pheno_df = self.pheno_df.loc[cell_list, :]
-            if self.train_test_split_ratio is not None:
-                self.gene_expr_mat_test = self.gene_expr_mat_test.loc[:, cell_list]
-                self.pheno_df_test = self.pheno_df_test.loc[cell_list, :]
-                self.gene_expr_mat_all = self.gene_expr_mat_all.loc[:, cell_list]
-                self.pheno_df_all = self.pheno_df_all.loc[cell_list, :]
-        self.cell_list = cell_list
-        return self
+            # Ad-lib slice expression matrix
+            cur_expr_meta = self.gene_meta[cur_expr_key]
+            # Gene Selection
+            if type(cur_expr_meta['gene_list']) is list or type(cur_expr_meta['gene_list']) is np.ndarray:
+                # Select given genes
+                cur_expr_mat = self.gene_expr_mat.loc[cur_expr_meta['gene_list'], :].iloc[:, item].copy()
+            elif cur_expr_meta['gene_list'] == '*':
+                # Select all genes
+                cur_expr_mat = self.gene_expr_mat.iloc[:, item].copy()
+            elif cur_expr_meta['gene_list'] == '-':
+                # Deselect given genes
+                cur_expr_mat = self.gene_expr_mat.drop(cur_expr_meta['exclude_list'], axis=0).iloc[:, item].copy()
+        return cur_expr_mat
 
     def export_data(self, item,
                     include_raw=True,
                     include_proc=True,
                     include_cell_key=True):
-        """
-        Export a batch of data given 'item' as index.
-        :param item: index
-        :param include_raw: should the unprocessed, subsetted expression matrix and phenotype data frame be exported
-        :param include_proc: should the processed data (following procedures specified in the configs) be exported
-        :param include_cell_key: should names/keys of the cells be exported
-        :return:
-        """
-
         # Type adaptation: when 'item' is a single index, convert it to list
         if type(item) is int:
             item = [item]
@@ -236,23 +180,11 @@ class SCRNASeqCountData(Dataset):
             ret['expr'] = dict()
             for cur_expr_key in self.gene_meta.keys():
                 cur_expr_meta = self.gene_meta[cur_expr_key]
-                cur_expr_mat = None
-                # Gene Selection
-                if type(cur_expr_meta['gene_list']) is list or type(cur_expr_meta['gene_list']) is np.ndarray:
-                    # Select given genes
-                    cur_expr_mat = self.gene_expr_mat.loc[cur_expr_meta['gene_list'], :].iloc[:, item].copy()
-                elif cur_expr_meta['gene_list'] == '*':
-                    # Select all genes
-                    cur_expr_mat = self.gene_expr_mat.iloc[:, item].copy()
-                elif cur_expr_meta['gene_list'] == '-':
-                    # Deselect given genes
-                    cur_expr_mat = self.gene_expr_mat.drop(cur_expr_meta['exclude_list'], axis=0).iloc[:, item].copy()
-                ret['expr'][cur_expr_key] = cur_expr_mat
-
+                ret['expr'][cur_expr_key] = self.__select_expr_mat(cur_expr_key, item)
                 # Post Transformation
                 for cur_procedure in cur_expr_meta['post_procedure']:
                     if cur_procedure['type'] == 'ToTensor':
-                        ret['expr'][cur_expr_key] = self.to_tensor(cur_expr_mat, input_type='gene')
+                        ret['expr'][cur_expr_key] = self.to_tensor(ret['expr'][cur_expr_key], input_type='gene')
                     else:
                         print("Unsupported post-transformation")
                         raise NotImplementedError
@@ -306,4 +238,3 @@ class SCRNASeqCountData(Dataset):
                                     include_raw=False,
                                     include_proc=True,
                                     include_cell_key=False)
-

@@ -50,9 +50,27 @@ class Extractor(torch.nn.Module):
         signature_regressors = torch.nn.ModuleDict()
         if self.signature_config is not None:
             for cur_signature in self.signature_config.keys():
-                signature_regressors[cur_signature] = model.LinRegressor(
-                    input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
-                    output_dim=self.signature_config[cur_signature]['signature_out_dim'])
+                model_details = self.signature_config[cur_signature].get('model')
+                if model_details is None:
+                    # Legacy: by default, use a linear regressor
+                    signature_regressors[cur_signature] = model.LinRegressor(
+                        input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
+                        output_dim=self.signature_config[cur_signature]['signature_out_dim'])
+                else:
+                    if model_details['type'] == 'FCRegressor':
+                        signature_regressors[cur_signature] = model.FCRegressor(
+                            input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
+                            output_dim=self.signature_config[cur_signature]['siganture_out_dim']
+                        )
+                    elif model_details['type'] == 'LinRegressor':
+                        signature_regressors[cur_signature] = model.LinRegressor(
+                            input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
+                            output_dim=self.signature_config[cur_signature]['signature_out_dim']
+                        )
+                    elif model_details['type'] == 'bypass' or model_details['type'] == 'Identity':
+                        signature_regressors[cur_signature] = torch.nn.Identity()
+                    else:
+                        raise ValueError('Unsupported phenotype side task model')
 
         # Phenotype Latent Compressor
         pheno_latent_compressors = torch.nn.ModuleDict()
@@ -67,10 +85,38 @@ class Extractor(torch.nn.Module):
         pheno_models = torch.nn.ModuleDict()
         if self.pheno_config is not None:
             for cur_pheno in self.pheno_config.keys():
-                pheno_models[cur_pheno] = model.LinClassifier(
-                    input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
-                    output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
-                )
+                model_details = self.pheno_config[cur_pheno].get('model')
+                if model_details is None:
+                    # Legacy: by default, use a linear classifier
+                    pheno_models[cur_pheno] = model.LinClassifier(
+                        input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
+                        output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
+                    )
+                else:
+                    if model_details['type'] == "LinClassifier":
+                        pheno_models[cur_pheno] = model.LinClassifier(
+                            input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
+                            output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
+                        )
+                    elif model_details['type'] == 'FCClassifier':
+                        pheno_models[cur_pheno] = model.FCClassifier(
+                            input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
+                            output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
+                        )
+                    elif model_details['type'] == 'FCRegressor':
+                        pheno_models[cur_pheno] = model.FCRegressor(
+                            input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
+                            output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
+                        )
+                    elif model_details['type'] == 'LinRegressor':
+                        pheno_models[cur_pheno] = model.LinRegressor(
+                            input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
+                            output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
+                        )
+                    elif model_details['type'] == 'bypass' or model_details['type'] == 'Identity':
+                        pheno_models[cur_pheno] = torch.nn.Identity()
+                    else:
+                        raise ValueError('Unsupported phenotype side task model')
 
         # Decoder
         decoder = model.FCDecoder(input_dim=total_latent_dim,
