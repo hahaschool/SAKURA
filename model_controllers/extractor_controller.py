@@ -2,6 +2,7 @@ import functools
 
 import torch
 import torch.optim
+from tabulate import tabulate
 
 import utils.distributions as distributions
 from models.extractor import Extractor
@@ -95,7 +96,82 @@ class ExtractorController(object):
             print(self.signature_config)
             print(self.main_latent_config)
             print(self.optimizer)
+            self.print_weight_projection(expected_epoch=100)
             print('===========================')
+
+    def print_weight_projection(self, expected_epoch):
+        # Initial weights
+        projected_weights = dict()
+        for cur_group in ['loss', 'regularization']:
+            for cur_main_loss_key in self.main_latent_config[cur_group].keys():
+                projected_weights['main_' + cur_group + '_' + cur_main_loss_key] = [
+                    self.main_latent_config[cur_group][cur_main_loss_key]['init_weight']]
+        for cur_pheno in self.pheno_config.keys():
+            for cur_group in ['loss', 'regularization']:
+                for cur_pheno_loss_key in self.pheno_config[cur_pheno][cur_group].keys():
+                    projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key] = [
+                        self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['init_weight']]
+        for cur_signature in self.signature_config.keys():
+            for cur_group in ['loss', 'regularization']:
+                for cur_signature_loss_key in self.signature_config[cur_signature][cur_group].keys():
+                    projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key] = [
+                        self.signature_config[cur_signature][cur_group][cur_signature_loss_key]['init_weight']]
+
+        # Weight inflation
+        for cur_epoch in range(1, expected_epoch):
+            for cur_group in ['loss', 'regularization']:
+                for cur_main_loss_key in self.main_latent_config[cur_group].keys():
+                    if cur_epoch >= self.main_latent_config[cur_group][cur_main_loss_key]['progressive_start_epoch']:
+                        projected_weights['main_' + cur_group + '_' + cur_main_loss_key].append(
+                            projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch - 1] *
+                            self.main_latent_config[cur_group][cur_main_loss_key]['progressive_const'])
+                    else:
+                        projected_weights['main_' + cur_group + '_' + cur_main_loss_key].append(
+                            projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch - 1])
+                    if self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight') is not None:
+                        projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch] = min(projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch],
+                                                                                                          self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight'))
+            for cur_pheno in self.pheno_config.keys():
+                for cur_group in ['loss', 'regularization']:
+                    for cur_pheno_loss_key in self.pheno_config[cur_pheno][cur_group].keys():
+                        if cur_epoch >= self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_start_epoch']:
+                            projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key].append(
+                                projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][
+                                    cur_epoch - 1] * self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key][
+                                    'progressive_const'])
+                        else:
+                            projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key].append(
+                                projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][
+                                    cur_epoch - 1])
+                        if self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight') is not None:
+                            projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][cur_epoch] = min(
+                                projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][cur_epoch],
+                                self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight'))
+            for cur_signature in self.signature_config.keys():
+                for cur_group in ['loss', 'regularization']:
+                    for cur_signature_loss_key in self.signature_config[cur_signature][cur_group].keys():
+                        if cur_epoch >= self.signature_config[cur_signature][cur_group][cur_signature_loss_key]['progressive_start_epoch']:
+                            projected_weights[
+                                'signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key].append(
+                                projected_weights[
+                                    'signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][
+                                    cur_epoch - 1] *
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
+                                    'progressive_const'])
+                        else:
+                            projected_weights[
+                                'signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key].append(
+                                projected_weights[
+                                    'signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][
+                                    cur_epoch - 1])
+                        if self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('max_weight') is not None:
+                            projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][cur_epoch] = min(
+                                projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][cur_epoch],
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('max_weight'))
+
+        # Make tabular and print
+        table = tabulate(projected_weights, showindex='always', headers='keys')
+        print(table)
 
     def reset(self):
         # Reset trainer state
@@ -165,6 +241,10 @@ class ExtractorController(object):
                             self.main_latent_config[cur_group][cur_main_loss_key]['progressive_start_epoch']:
                         self.main_loss_weight[cur_group][cur_main_loss_key] *= \
                             self.main_latent_config[cur_group][cur_main_loss_key]['progressive_const']
+                    if self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight') is not None:
+                        self.main_loss_weight[cur_group][cur_main_loss_key] = min(
+                            self.main_loss_weight[cur_group][cur_main_loss_key],
+                            self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight'))
 
         # Phenotype supervision and regularization loss weight progression
         if prog_pheno:
@@ -182,6 +262,10 @@ class ExtractorController(object):
                                 self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_start_epoch']:
                             self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] *= \
                                 self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_const']
+                        if self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight') is not None:
+                            self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] = min(
+                                self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key],
+                                self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight'))
 
         # Signature supervision and regularization loss progression
         if prog_signature:
@@ -201,6 +285,12 @@ class ExtractorController(object):
                             self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] *= \
                                 self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
                                     'progressive_const']
+                        if self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get(
+                                'max_weight') is not None:
+                            self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] = min(
+                                self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key],
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get(
+                                    'max_weight'))
 
         if self.verbose:
             print('[Extractor Controller]: next epoch, current global epoch:', self.cur_epoch)
