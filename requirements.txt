@@ -1,0 +1,9 @@
+pandas~=1.0.5
+tensorboardX~=2.1
+numpy~=1.19.0
+torch~=1.5.1
+sklearn~=0.0
+scikit-learn~=0.23.1
+dask~=2.20.0
+scipy~=1.5.1
+tabulate~=0.8.7
