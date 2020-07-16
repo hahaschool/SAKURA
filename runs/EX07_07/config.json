@@ -1,6 +1,6 @@
 {
-  "remarks": "This experiment is forked from EX07_02, but with different weight inflation strategy (More harsh on main latent, less inflation on extra latent dim).",
-  "log_path": "./runs/EX07_03/logs/",
+  "remarks": "This experiment is forked from EX07_03, but shuffled phenotype labels.",
+  "log_path": "./runs/EX07_07/logs/",
   "reproducible": "True",
   "rnd_seed": 114514,
   "dataset": {
@@ -8,8 +8,8 @@
     "gene_expr_MM_path": "./dataset/10X_Purified_PBMC/cleaned_pooled_log_count_dgC_unfiltered.mtx",
     "gene_name_csv_path": "./dataset/10X_Purified_PBMC/cleaned_pooled_log_count_dgC_unfiltered_gene_names.csv",
     "cell_name_csv_path": "./dataset/10X_Purified_PBMC/cleaned_pooled_log_count_dgC_unfiltered_cell_names.csv",
-    "pheno_csv_path": "./dataset/10X_Purified_PBMC/pooled_pheno.csv",
-    "pheno_meta_path": "./runs/EX07_03/pheno_meta.json",
+    "pheno_csv_path": "./dataset/10X_Purified_PBMC/shuffled_pooled_pheno.csv",
+    "pheno_meta_path": "./runs/EX07_07/pheno_meta.json",
     "expr_mat_pre_slice": "True",
     "selected_pheno": [
       "data_key"
