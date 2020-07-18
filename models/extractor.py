@@ -60,7 +60,8 @@ class Extractor(torch.nn.Module):
                     if model_details['type'] == 'FCRegressor':
                         signature_regressors[cur_signature] = model.FCRegressor(
                             input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
-                            output_dim=self.signature_config[cur_signature]['siganture_out_dim']
+                            output_dim=self.signature_config[cur_signature]['siganture_out_dim'],
+                            hidden_neurons=self.signature_config[cur_signature].get('hidden_neurons', 5)
                         )
                     elif model_details['type'] == 'LinRegressor':
                         signature_regressors[cur_signature] = model.LinRegressor(
@@ -106,7 +107,8 @@ class Extractor(torch.nn.Module):
                     elif model_details['type'] == 'FCRegressor':
                         pheno_models[cur_pheno] = model.FCRegressor(
                             input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
-                            output_dim=self.pheno_config[cur_pheno]['pheno_out_dim']
+                            output_dim=self.pheno_config[cur_pheno]['pheno_out_dim'],
+                            hidden_neurons=self.pheno_config[cur_pheno].get('hidden_neurons', 5)
                         )
                     elif model_details['type'] == 'LinRegressor':
                         pheno_models[cur_pheno] = model.LinRegressor(

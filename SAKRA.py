@@ -1,5 +1,6 @@
 import argparse
 import json
+import pickle
 import random
 import warnings
 
@@ -184,8 +185,21 @@ class SAKRA(object):
         self.splits = dict()
         self.data_splitter = DataSplitter()
 
-        # Dummy 'all' split mask
+        # 'all' split mask for selecting all data
         self.splits['all'] = np.ones(len(self.count_data), dtype=np.bool)
+
+        if self.config.get('manual_split') == 'True':
+            # Should load external files for splits
+            # when conflicts occur, will directly override existing splits (i.e. all)
+            with open(self.config.get('manual_split_pkl_path'), 'rb') as f:
+                ext_splits = pickle.load(f)
+            for cur_split_key in ext_splits.keys():
+                self.splits[cur_split_key] = ext_splits[cur_split_key]
+            if self.verbose:
+                print('=================')
+                print("Imported external splits from", self.config.get('manual_split_pkl_path'))
+                print("External splits:", ext_splits)
+                print("Merged splits:", self.splits)
 
         ## Overall train/test split
         if self.config['overall_train_test_split']['type'] == 'auto':
@@ -199,8 +213,11 @@ class SAKRA(object):
                                                                                            k=self.split_overall_train_dec)
             self.splits['overall_train'] = overall_train_test_split['train'].astype(np.bool)
             self.splits['overall_test'] = overall_train_test_split['test'].astype(np.bool)
+        elif self.config['overall_train_test_split']['type'] == 'none':
+            # Do nothing
+            if self.verbose:
+                print('Skipped main splits')
         else:
-            # TODO: Manual overall train/test split
             raise NotImplementedError
 
         ## Phenotype train/test
@@ -208,6 +225,7 @@ class SAKRA(object):
             for cur_pheno in self.selected_pheno:
                 # Auto split
                 if self.count_data.pheno_meta[cur_pheno]['split']['type'] == 'auto':
+
                     train_split_id = 'pheno_' + str(cur_pheno) + '_train'
                     test_split_id = 'pheno_' + str(cur_pheno) + '_test'
                     cur_base_split = self.splits[self.count_data.pheno_meta[cur_pheno]['split']['base']].astype(
@@ -221,8 +239,11 @@ class SAKRA(object):
                         k=self.count_data.pheno_meta[cur_pheno]['split']['train_dec'])
                     self.splits[train_split_id] = cur_label_train_test_split['train'].astype(np.bool)
                     self.splits[test_split_id] = cur_label_train_test_split['test'].astype(np.bool)
+                elif self.count_data.pheno_meta[cur_pheno]['split']['type'] == 'none':
+                    # Do nothing
+                    if self.verbose:
+                        print('Skipped pheno splits for:', cur_pheno)
                 else:
-                    # TODO: Manual label train/test split
                     raise NotImplementedError
 
         ## Signature train/test
@@ -244,8 +265,11 @@ class SAKRA(object):
                         k=self.signature_config[cur_signature]['split']['train_dec'])
                     self.splits[train_split_id] = cur_signature_train_test_split['train'].astype(np.bool)
                     self.splits[test_split_id] = cur_signature_train_test_split['test'].astype(np.bool)
+                elif self.signature_config[cur_signature]['split']['type'] == 'none':
+                    # Do nothing
+                    if self.verbose:
+                        print('Skipped signature splits for:', cur_signature)
                 else:
-                    # TODO: Manual signature train/test split
                     raise NotImplementedError
 
         ## Print splits for debugging (in verbose mode)
@@ -274,8 +298,16 @@ class SAKRA(object):
         # Check pheno_df_keys of selected phenotypes are exist in the dataset
         problematic_phenos = list()
         for cur_pheno in self.selected_pheno:
-            cur_pheno_df_key = pheno_meta[cur_pheno]['pheno_df_key']
-            if (cur_pheno_df_key in self.count_data.pheno_df.columns) is False:
+            if pheno_meta[cur_pheno]['type'] == 'categorical':
+                cur_pheno_df_key = pheno_meta[cur_pheno]['pheno_df_key']
+                if (cur_pheno_df_key in self.count_data.pheno_df.columns) is False:
+                    problematic_phenos.append(cur_pheno)
+            elif pheno_meta[cur_pheno]['type'] == 'numerical':
+                cur_pheno_df_keys = pheno_meta[cur_pheno]['pheno_df_keys']
+                for cur_key in cur_pheno_df_keys:
+                    if (cur_key in self.count_data.pheno_df.columns) is False:
+                        problematic_phenos.append(cur_pheno)
+            else:
                 problematic_phenos.append(cur_pheno)
         if len(problematic_phenos) > 0:
             warnings.warn("Exists selecting phenotype(s) not found in the dataset:" + str(problematic_phenos))

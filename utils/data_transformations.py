@@ -9,24 +9,34 @@ class ToTensor(object):
     Convert object to PyTorch Tensors
     """
 
-    def __call__(self, sample, input_type='gene'):
+    def __call__(self, sample, input_type='gene', force_tensor_type=None):
+        ret = None
         if input_type == 'gene':
             if type(sample) is pd.core.frame.DataFrame:
-                return torch.from_numpy(sample.astype(np.float).values).transpose(0, 1).float()
+                ret = torch.from_numpy(sample.astype(np.float).values).transpose(0, 1).float()
             elif type(sample) is pd.core.series.Series:
-                return torch.from_numpy(sample.astype(np.float).values).unsqueeze(0).float()
+                ret = torch.from_numpy(sample.astype(np.float).values).unsqueeze(0).float()
             else:
                 raise NotImplementedError
         elif input_type == 'pheno':
             if type(sample) is pd.core.frame.DataFrame:
-                return torch.from_numpy(sample.astype(np.float).values)
+                ret = torch.from_numpy(sample.astype(np.float).values)
             elif type(sample) is np.ndarray:
-                return torch.from_numpy(sample)
+                ret = torch.from_numpy(sample)
             else:
                 raise NotImplementedError
         else:
             raise NotImplementedError
-
+        if force_tensor_type is not None:
+            if force_tensor_type == 'float':
+                ret = ret.float()
+            elif force_tensor_type == 'int':
+                ret = ret.int()
+            elif force_tensor_type == 'double':
+                ret = ret.double()
+            else:
+                raise NotImplementedError('Expected tensor type not supported yet')
+        return ret
 
 class ToOnehot(object):
     """

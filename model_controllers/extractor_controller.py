@@ -411,15 +411,27 @@ class ExtractorController(object):
         :return:
         """
         # Forward model (obtain pre-loss-calculated tensors)
-        fwd_res = self.model(batch['expr'][expr_key],
-                             forward_main_latent=forward_main_latent,
-                             forward_reconstruction=forward_reconstruction,
-                             forward_signature=forward_signature,
-                             selected_signature=self.select_item_dict(selection=selected_signature,
-                                                                      internal=self.signature_config),
-                             forward_pheno=forward_pheno,
-                             selected_pheno=self.select_item_dict(selection=selected_pheno,
-                                                                  internal=self.pheno_config))
+        if forward_reconstruction:
+            # When reconstruction is on, all latents should be forwarded, though loss could be backwarded partially
+            fwd_res = self.model(batch['expr'][expr_key],
+                                 forward_main_latent=forward_main_latent,
+                                 forward_reconstruction=forward_reconstruction,
+                                 forward_signature=forward_signature,
+                                 selected_signature=self.select_item_dict(selection='*',
+                                                                          internal=self.signature_config),
+                                 forward_pheno=forward_pheno,
+                                 selected_pheno=self.select_item_dict(selection='*',
+                                                                      internal=self.pheno_config))
+        else:
+            fwd_res = self.model(batch['expr'][expr_key],
+                                 forward_main_latent=forward_main_latent,
+                                 forward_reconstruction=forward_reconstruction,
+                                 forward_signature=forward_signature,
+                                 selected_signature=self.select_item_dict(selection=selected_signature,
+                                                                          internal=self.signature_config),
+                                 forward_pheno=forward_pheno,
+                                 selected_pheno=self.select_item_dict(selection=selected_pheno,
+                                                                      internal=self.pheno_config))
 
         # Reconstruction Loss
         main_loss = {'loss': dict(), 'regularization': dict()}
@@ -468,6 +480,9 @@ class ExtractorController(object):
                     elif cur_pheno_loss['type'] == 'MSE' or cur_pheno_loss['type'] == 'L2':
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
                             torch.nn.functional.mse_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
+                    elif cur_pheno_loss['type'] == 'L1':
+                        pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
+                            torch.nn.functional.l1_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
                     else:
                         print('Unsupported phenotype supervision loss type.')
                         raise ValueError
