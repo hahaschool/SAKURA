@@ -40,7 +40,7 @@ colnames(expr_mat) <- cell_names
 # Make Embedding Plots
 
 ```{r global configs}
-total_epochs <- 60
+total_epochs <- 100
 ```
 
 ## Main latent plots (main.1 and main.2)
@@ -48,7 +48,9 @@ total_epochs <- 60
 
 ```{r signature latent plots}
 try({
-      keys_to_plot <- c("overall_train_all_latent", "overall_test_all_latent")
+      keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
+                        "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
+                        "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
       output_width <- 15
       output_height <- 15
       for (i in c(seq(1, total_epochs, 9), total_epochs)) {
@@ -62,7 +64,7 @@ try({
             theme_classic() +
             theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- './runs/EX07_07/plots/main_lat'
+          plt_path <- './runs/EX08_01/plots/main_lat'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_main.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
@@ -75,7 +77,9 @@ try({
 
 ```{r signature distrib}
 try({
-      keys_to_plot <- c("overall_train_all_latent", "overall_test_all_latent")
+      keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
+                        "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
+                        "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
       output_width <- 10
       output_height <- 10
       for (i in c(seq(1, total_epochs, 9), total_epochs)) {
@@ -84,14 +88,12 @@ try({
           cur_emb <- read.csv(emb_filename) %>%
             left_join(y = pheno_df %>% select(cell, data_key), by = 'cell')
           cur_emb2 <- cur_emb %>% select(-data_key, -data_key)
-          plt <- ggplot() +
-            geom_density(data = cur_emb, aes(x = data_key.1, colour = data_key)) +
-            geom_density(data = cur_emb2, aes(x = data_key.1), colour = "grey") +
-            # facet_wrap(~data_key) +
+          plt <- ggplot(cur_emb) +
+            geom_point(aes(x = data_key.1, y = data_key.2, color = data_key)) +
             theme_classic() +
             theme(legend.position = 'bottom')
-
-          plt_path <- './runs/EX07_07/plots/pheno_distrib'
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+          plt_path <- './runs/EX08_01/plots/data_key_distrib'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_data_key.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
@@ -99,6 +101,34 @@ try({
       }
     })
 ```
+
+## Protein marker
+```{r signature distrib}
+try({
+      keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
+                        "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
+                        "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
+      output_width <- 10
+      output_height <- 10
+      for (i in c(seq(1, total_epochs, 9), total_epochs)) {
+        for (cur_key in keys_to_plot) {
+          emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+          cur_emb <- read.csv(emb_filename) %>%
+            left_join(y = pheno_df %>% select(cell, data_key), by = 'cell')
+          plt <- ggplot(cur_emb) +
+            geom_point(aes(x = protein_markers.1, y = protein_markers.2, color = data_key)) +
+            theme_classic() +
+            theme(legend.position = 'bottom')
+          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+          plt_path <- './runs/EX08_01/plots/protein_markers_distrib'
+          system(paste0('mkdir -p ', plt_path))
+          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_protein_markers.jpg')
+          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+        }
+      }
+    })
+```
+
 
 ## 3-D Plots
 
@@ -113,7 +143,7 @@ try({
           cur_emb <- read.csv(emb_filename) %>%
             left_join(y = pheno_df %>% select(cell, data_key), by = 'cell')
           plt <- plot_ly(cur_emb, x = ~main.1, y = ~main.2, z = ~data_key.1, color = ~data_key)
-          plt_path <- paste0(getwd(), '/runs/EX07_07/plots/3d_plt/', i, '_main.1_main.2_data_key_', cur_key)
+          plt_path <- paste0(getwd(), '/runs/EX08_01/plots/3d_plt/', i, '_main.1_main.2_data_key_', cur_key)
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/plt.html')
           saveWidget(plt, file = plt_filename)
@@ -125,16 +155,3 @@ try({
 
 # Notes
 
-## Observations
-
-Seems our proposal in EX07_02 is working. By lowering the weight of extra latent loss, the mixing of different classes are alleviated, while perserving some useful patterns, e.g. CD4+ is spanning on other types of detailed CD4+ cells. Cells are also mixed better in the main latent space, from the marginal distributions.
-
-Next we will test what will happen if we give one more dimension to extra latent of data_key.
-
-## Console outputs (initial part)
-
-```
-
-
-
-```
