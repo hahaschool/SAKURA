@@ -143,6 +143,13 @@
             </RMarkdownRenderProfile>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/runs/EX08_03/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="knitRootDirectory" value="$PROJECT_DIR$/runs/EX08_03" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

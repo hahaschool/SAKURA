@@ -9,6 +9,13 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="zhzhang@hpc9.cse.cuhk.edu.hk:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/research/kevinyip11/zhzhang/SAKRA" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
     </serverData>
   </component>
 </project>

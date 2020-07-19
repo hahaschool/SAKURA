@@ -1,10 +1,12 @@
 import argparse
 import json
+import os
 import pickle
 import random
 import warnings
 
 import numpy as np
+import torch
 import torch.backends.cudnn
 import torch.cuda
 import torch.optim
@@ -531,5 +533,7 @@ class SAKRA(object):
 if __name__ == '__main__':
     print('SCARE/SAKRA Prototype')
     print('Loading dataset...')
+    print('Working directory:', os.getcwd())
+
     args = parse_args()
     instance = SAKRA(config_json_path=args.config, verbose=args.verbose)
