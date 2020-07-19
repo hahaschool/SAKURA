@@ -18,7 +18,7 @@ getwd()
 # Configuration
 
 ```{r paths}
-emb_path <- './runs/EX07_03/logs'
+emb_path <- './runs/EX07_07/logs'
 pheno_df_path <- './dataset/10X_Purified_PBMC/pooled_pheno.csv'
 expr_mat_path <- './dataset/10X_Purified_PBMC/cleaned_pooled_log_count_dgC_unfiltered.mtx'
 gene_name_path <- './dataset/10X_Purified_PBMC/cleaned_pooled_log_count_dgC_unfiltered_gene_names.csv'
@@ -62,7 +62,7 @@ try({
             theme_classic() +
             theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- './runs/EX07_03/plots/main_lat'
+          plt_path <- './runs/EX07_07/plots/main_lat'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_main.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
@@ -91,7 +91,7 @@ try({
             theme_classic() +
             theme(legend.position = 'bottom')
 
-          plt_path <- './runs/EX07_03/plots/pheno_distrib'
+          plt_path <- './runs/EX07_07/plots/pheno_distrib'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_data_key.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
@@ -113,7 +113,7 @@ try({
           cur_emb <- read.csv(emb_filename) %>%
             left_join(y = pheno_df %>% select(cell, data_key), by = 'cell')
           plt <- plot_ly(cur_emb, x = ~main.1, y = ~main.2, z = ~data_key.1, color = ~data_key)
-          plt_path <- paste0(getwd(), '/runs/EX07_03/plots/3d_plt/', i, '_main.1_main.2_data_key_', cur_key)
+          plt_path <- paste0(getwd(), '/runs/EX07_07/plots/3d_plt/', i, '_main.1_main.2_data_key_', cur_key)
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/plt.html')
           saveWidget(plt, file = plt_filename)
@@ -134,13 +134,13 @@ Next we will test what will happen if we give one more dimension to extra latent
 ## Console outputs (initial part)
 
 ```
-/Users/hahaschool/Desktop/Research/SAKRA/venv/bin/python "/Volumes/Macintosh HD/Applications/PyCharm.app/Contents/plugins/python/helpers/pydev/pydevconsole.py" --mode=client --port=60978
+/Users/hahaschool/Desktop/Research/SAKRA/venv/bin/python "/Volumes/Macintosh HD/Applications/PyCharm.app/Contents/plugins/python/helpers/pydev/pydevconsole.py" --mode=client --port=58197
 import sys; print('Python %s on %s' % (sys.version, sys.platform))
 sys.path.extend(['/Users/hahaschool/Desktop/Research/SAKRA'])
 PyDev console: starting.
 Python 3.7.8 (default, Jul  4 2020, 10:17:17)
 [Clang 11.0.3 (clang-1103.0.32.62)] on darwin
->>> runfile('/Users/hahaschool/Desktop/Research/SAKRA/SAKRA.py', args=['--config', './runs/EX07_03/config.json', '--verbose', 'True'], wdir='/Users/hahaschool/Desktop/Research/SAKRA')
+>>> runfile('/Users/hahaschool/Desktop/Research/SAKRA/SAKRA.py', args=['--config', './runs/EX07_07/config.json', '--verbose', 'True'], wdir='/Users/hahaschool/Desktop/Research/SAKRA')
 SCARE/SAKRA Prototype
 Loading dataset...
 Reproducibe seed: 114514
@@ -168,22 +168,23 @@ MT-CYB                           0.000000  ...                          2.709732
 No external gene expression set provided, using dummy.
 Gene expression set metadata:
 {'all': {'gene_list': '*', 'pre_procedure': [], 'post_procedure': [{'type': 'ToTensor'}]}}
-Phenotype data from CSV from: ./dataset/10X_Purified_PBMC/pooled_pheno.csv
+Phenotype data from CSV from: ./dataset/10X_Purified_PBMC/shuffled_pooled_pheno.csv
 (94655, 1)
-                                                       data_key
-CD14+_Monocytes-AAACATACCACTAG-1                CD14+_Monocytes
-CD14+_Monocytes-AAACATACGTTCAG-1                CD14+_Monocytes
-CD14+_Monocytes-AAACATTGACGGTT-1                CD14+_Monocytes
-CD14+_Monocytes-AAACATTGCTTCGC-1                CD14+_Monocytes
-CD14+_Monocytes-AAACATTGGGCAAG-1                CD14+_Monocytes
-                                                         ...
-CD8+_Cytotoxic_T_cells-TTTGCATGAACGGG-1  CD8+_Cytotoxic_T_cells
-CD8+_Cytotoxic_T_cells-TTTGCATGAAGATG-1  CD8+_Cytotoxic_T_cells
-CD8+_Cytotoxic_T_cells-TTTGCATGAGCGTT-1  CD8+_Cytotoxic_T_cells
-CD8+_Cytotoxic_T_cells-TTTGCATGCAAGCT-1  CD8+_Cytotoxic_T_cells
-CD8+_Cytotoxic_T_cells-TTTGCATGCCGCTT-1  CD8+_Cytotoxic_T_cells
+                                                                     data_key
+X
+CD14+_Monocytes-AAACATACCACTAG-1                                CD19+_B_Cells
+CD14+_Monocytes-AAACATACGTTCAG-1         CD8+_CD45RA+_Naive_Cytotoxic_T_Cells
+CD14+_Monocytes-AAACATTGACGGTT-1                                  CD34+_Cells
+CD14+_Monocytes-AAACATTGCTTCGC-1                  CD4+_CD45RO+_Memory_T_Cells
+CD14+_Monocytes-AAACATTGGGCAAG-1                              CD14+_Monocytes
+                                                                       ...
+CD8+_Cytotoxic_T_cells-TTTGCATGAACGGG-1           CD4+_CD45RO+_Memory_T_Cells
+CD8+_Cytotoxic_T_cells-TTTGCATGAAGATG-1         CD4+_CD25+_Regulatory_T_Cells
+CD8+_Cytotoxic_T_cells-TTTGCATGAGCGTT-1           CD4+_CD45RO+_Memory_T_Cells
+CD8+_Cytotoxic_T_cells-TTTGCATGCAAGCT-1                CD8+_Cytotoxic_T_cells
+CD8+_Cytotoxic_T_cells-TTTGCATGCCGCTT-1           CD4+_CD45RO+_Memory_T_Cells
 [94655 rows x 1 columns]
-Reading phenotype metadata json from: ./runs/EX07_03/pheno_meta.json
+Reading phenotype metadata json from: ./runs/EX07_07/pheno_meta.json
 ==========================
 Configuration integrity pre-check ok: True
 ==========================

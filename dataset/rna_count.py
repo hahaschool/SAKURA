@@ -264,26 +264,40 @@ class SCRNASeqCountData(Dataset):
             ret['pheno'] = dict()
             for pheno_output_key in self.pheno_meta.keys():
                 cur_pheno_meta = self.pheno_meta[pheno_output_key]
-                pheno_df_key = cur_pheno_meta['pheno_df_key']
-                ret['pheno'][pheno_output_key] = self.pheno_df.loc[:, [pheno_df_key]].iloc[item, :].copy()
-                # Process phenotype label as required
-                for cur_procedure in cur_pheno_meta['post_procedure']:
-                    if cur_procedure['type'] == 'ToTensor':
-                        ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
-                                                                        input_type='pheno')
-                    elif cur_procedure['type'] == 'ToOnehot':
-                        ret['pheno'][pheno_output_key] = self.to_onehot(sample=ret['pheno'][pheno_output_key],
-                                                                        order=cur_pheno_meta['order'])
-                    elif cur_procedure['type'] == 'ToOrdinal':
-                        ret['pheno'][pheno_output_key] = self.to_ordinal(sample=ret['pheno'][pheno_output_key],
-                                                                         order=cur_pheno_meta['order'])
-                    elif cur_procedure['type'] == 'ToKBins':
-                        ret['pheno'][pheno_output_key] = self.to_kbins(sample=ret['pheno'][pheno_output_key],
-                                                                       n_bins=cur_procedure['n_bins'],
-                                                                       encode=cur_procedure['encode'],
-                                                                       strategy=cur_procedure['strategy'])
-                    else:
-                        raise NotImplementedError
+
+                # Slice phenotype dataframe
+                if cur_pheno_meta['type'] == 'categorical':
+                    ret['pheno'][pheno_output_key] = self.pheno_df.loc[:, [cur_pheno_meta['pheno_df_key']]].iloc[item, :].copy()
+                    # Process phenotype label as required
+                    for cur_procedure in cur_pheno_meta['post_procedure']:
+                        if cur_procedure['type'] == 'ToTensor':
+                            ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
+                                                                            input_type='pheno')
+                        elif cur_procedure['type'] == 'ToOnehot':
+                            ret['pheno'][pheno_output_key] = self.to_onehot(sample=ret['pheno'][pheno_output_key],
+                                                                            order=cur_pheno_meta['order'])
+                        elif cur_procedure['type'] == 'ToOrdinal':
+                            ret['pheno'][pheno_output_key] = self.to_ordinal(sample=ret['pheno'][pheno_output_key],
+                                                                             order=cur_pheno_meta['order'])
+                        elif cur_procedure['type'] == 'ToKBins':
+                            ret['pheno'][pheno_output_key] = self.to_kbins(sample=ret['pheno'][pheno_output_key],
+                                                                           n_bins=cur_procedure['n_bins'],
+                                                                           encode=cur_procedure['encode'],
+                                                                           strategy=cur_procedure['strategy'])
+                        else:
+                            raise NotImplementedError('Unsupported transformation type for phenotype groups')
+                elif cur_pheno_meta['type'] == 'numerical':
+                    ret['pheno'][pheno_output_key] = self.pheno_df.loc[:, [cur_pheno_meta['pheno_df_keys']]].iloc[item, :].copy()
+                    # Process phenotype label as required
+                    for cur_procedure in cur_pheno_meta['post_procedure']:
+                        if cur_procedure['type'] == 'ToTensor':
+                            ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
+                                                                            input_type='pheno')
+                        else:
+                            raise NotImplementedError('Unsupported transformation type for phenotype groups')
+                else:
+                    raise ValueError('Unsupported phenotype group name')
+
         return ret
 
     def __len__(self):
