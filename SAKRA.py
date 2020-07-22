@@ -364,12 +364,12 @@ class SAKRA(object):
     def train(self,
               split_id,
               train_main=True,
-              train_pheno=True, selected_pheno = None,
+              train_pheno=True, selected_pheno=None,
               train_signature=True, selected_signature=None,
               epoch=50, batch_size=100,
               tick_controller_epoch=True,
               make_logs=True, dump_latent=True, log_prefix='train', latent_prefix='',
-              test_every_epoch=False, tests=None):
+              test_every_epoch=False, test_on_segment=False, test_segment=2000, tests=None):
         """
         Batch train model for at least one epoch.
         :param split_id: (str) id of the split to be used in this train
@@ -422,8 +422,14 @@ class SAKRA(object):
         # Split mask
         selected_split_mask = self.splits[split_id]
 
+        # Local tick for segmental test
+        cur_tick = 0
+
         # Train epochs
         for cur_epoch in range(epoch):
+            # Local tick
+            cur_tick += 1
+
             # Begin epoch
             if tick_controller_epoch:
                 self.controller.next_epoch(prog_main=train_main,
@@ -452,7 +458,21 @@ class SAKRA(object):
                                          loss_name_prefix=log_prefix)
                 self.controller.tick()
 
-            # Perform tests if needed
+                # Segmental Test
+                if test_on_segment and (cur_tick + 1) % test_segment == 0:
+                    # Perform test
+                    for cur_test in tests:
+                        # When test, all latents will be evaluated
+                        self.test(split_id=cur_test['on_split'],
+                                  test_main=True,
+                                  test_pheno=True, selected_pheno=None,
+                                  test_signature=True, selected_signature=None,
+                                  make_logs=(cur_test.get('make_logs') == 'True'),
+                                  log_prefix=cur_test.get('log_prefix', 'test'),
+                                  dump_latent=(cur_test.get('dump_latent') == 'True'),
+                                  latent_prefix=cur_test.get('latent_prefix', ''))
+
+            # Epoch-wise test
             if test_every_epoch:
                 for cur_test in tests:
                     # When test, all latents will be evaluated
@@ -464,6 +484,20 @@ class SAKRA(object):
                               log_prefix=cur_test.get('log_prefix', 'test'),
                               dump_latent=(cur_test.get('dump_latent') == 'True'),
                               latent_prefix=cur_test.get('latent_prefix', ''))
+
+        # Terminal test if segmental test is on
+        if test_on_segment:
+            # Perform test
+            for cur_test in tests:
+                # When test, all latents will be evaluated
+                self.test(split_id=cur_test['on_split'],
+                          test_main=True,
+                          test_pheno=True, selected_pheno=None,
+                          test_signature=True, selected_signature=None,
+                          make_logs=(cur_test.get('make_logs') == 'True'),
+                          log_prefix=cur_test.get('log_prefix', 'test'),
+                          dump_latent=(cur_test.get('dump_latent') == 'True'),
+                          latent_prefix=cur_test.get('latent_prefix', ''))
 
 
     def test(self, split_id,
@@ -638,7 +672,7 @@ class SAKRA(object):
             for cur_tick in range(ticks):
                 # Verbose loggings
                 if self.verbose:
-                    print("Hybrid tick", cur_tick, ": summing", split_configs.keys())
+                    print("Hybrid tick", cur_tick, ": summing loss from", list(split_configs.keys()))
 
                 # Collect all losses
                 cur_losses = dict()
@@ -728,7 +762,9 @@ class SAKRA(object):
                            log_prefix=cur_story_item.get('log_prefix', 'train'),
                            batch_size=cur_story_item.get('batch_size'),
                            test_every_epoch=(cur_story_item.get('test_every_epoch') == 'True'),
-                           tests=cur_story_item.get('tests'))
+                           tests=cur_story_item.get('tests'),
+                           test_on_segment=(cur_story_item.get('test_on_segment') == 'True'),
+                           test_segment=cur_story_item.get('test_segment'))
             elif cur_action == 'test':
                 self.test(split_id=cur_story_item['on_split'],
                           test_main=True,
