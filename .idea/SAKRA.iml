@@ -38,11 +38,19 @@
       <excludeFolder url="file://$MODULE_DIR$/runs/EX07_06/plots" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX07_07/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX07_07/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX07_08/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX07_08/plots" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_01/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_01/plots" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_02/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_03/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_03/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_04/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_04/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_05/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_05/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_06/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_06/plots" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
     <orderEntry type="inheritedJdk" />

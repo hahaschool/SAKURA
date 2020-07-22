@@ -24,10 +24,11 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, default='./config.json', help='model config JSON path')
     parser.add_argument('-v', '--verbose', type=bool, default=False, help='verbose console outputs')
+    parser.add_argument('-s', '--suppress_train', type=bool, default=False, help='suppress model training, only setup dataset and model')
     return parser.parse_args()
 
 class SAKRA(object):
-    def __init__(self, config_json_path, verbose=False):
+    def __init__(self, config_json_path, verbose=False, suppress_train=False):
 
         # Read configurations for arguments
         with open(config_json_path, 'r') as f:
@@ -53,10 +54,52 @@ class SAKRA(object):
             if self.device == 'cuda':
                 torch.cuda.manual_seed(self.rnd_seed)
                 torch.cuda.manual_seed_all(self.rnd_seed)
-                torch.backends.cudnn.enabled=False
-                torch.backends.cudnn.benchmark=False
-                torch.backends.cudnn.deterministic=True
+                torch.backends.cudnn.enabled = False
+                torch.backends.cudnn.benchmark = False
+                torch.backends.cudnn.deterministic = True
 
+        # Setup dataset
+        self.setup_dataset()
+
+        # Generate splits
+        self.generate_splits()
+
+        # Get actual gene count (input dimension)
+        input_genes = self.count_data[0]['expr']['all'].shape[1]
+
+        # Setup model
+        self.model = Extractor(input_dim=input_genes,
+                               signature_config=self.signature_config,
+                               pheno_config=self.count_data.pheno_meta,
+                               encoder_neurons=self.config['main_latent']['encoder_neurons'],
+                               decoder_neurons=self.config['main_latent']['decoder_neurons'],
+                               main_latent_dim=self.config['main_latent']['latent_dim'],
+                               verbose=self.verbose)
+        # Setup trainer
+        self.controller = ExtractorController(model=self.model,
+                                              config=self.config,
+                                              pheno_config=self.count_data.pheno_meta,
+                                              signature_config=self.signature_config,
+                                              verbose=self.verbose)
+
+        # Setup logger
+        self.logger = Logger(log_path=self.log_path)
+
+        # Save settings to log folder
+        if self.config['dump_configs'] == 'True':
+            self.logger.save_config(self.count_data.pheno_meta, self.log_path + '/pheno_config.json')
+            self.logger.save_config(self.count_data.gene_meta, self.log_path + '/gene_meta.json')
+            self.logger.save_config(self.signature_config, self.log_path + '/signature_config.json')
+        if self.config['dump_splits'] == 'True':
+            self.logger.save_splits(self.splits, self.log_path + '/splits.pkl')
+
+        # [Debugging option] suppress training
+        if suppress_train:
+            return
+
+        self.train_story(story=self.config['story'])
+
+    def setup_dataset(self):
         # Dataset (main part)
         if self.config['dataset']['type'] == 'rna_count':
             self.expr_csv_path = self.config['dataset'].get('expr_csv_path')
@@ -146,41 +189,6 @@ class SAKRA(object):
                 raise ValueError('Integrity check failed, see console log for details')
         else:
             raise ValueError('Unsupported dataset type')
-
-        # Generate splits
-        self.generate_splits()
-
-        # Get actual gene count (input dimension)
-        input_genes = self.count_data[0]['expr']['all'].shape[1]
-
-        # Setup model
-        self.model = Extractor(input_dim=input_genes,
-                               signature_config=self.signature_config,
-                               pheno_config=self.count_data.pheno_meta,
-                               encoder_neurons=self.config['main_latent']['encoder_neurons'],
-                               decoder_neurons=self.config['main_latent']['decoder_neurons'],
-                               main_latent_dim=self.config['main_latent']['latent_dim'],
-                               verbose=self.verbose)
-        # Setup trainer
-        self.controller = ExtractorController(model=self.model,
-                                              config=self.config,
-                                              pheno_config=self.count_data.pheno_meta,
-                                              signature_config=self.signature_config,
-                                              verbose=self.verbose)
-
-        # Setup logger
-        self.logger = Logger(log_path=self.log_path)
-
-        # Save settings to log folder
-        if self.config['dump_configs'] == 'True':
-            self.logger.save_config(self.count_data.pheno_meta, self.log_path + '/pheno_config.json')
-            self.logger.save_config(self.count_data.gene_meta, self.log_path + '/gene_meta.json')
-            self.logger.save_config(self.signature_config, self.log_path + '/signature_config.json')
-        if self.config['dump_splits'] == 'True':
-            self.logger.save_splits(self.splits, self.log_path + '/splits.pkl')
-
-        self.train_story(story=self.config['story'])
-
 
     def generate_splits(self):
         # Splits
@@ -490,9 +498,179 @@ class SAKRA(object):
                                            path=self.log_path + '/' + str(
                                                self.controller.cur_epoch) + '_' + latent_prefix + '.csv')
 
+    def train_hybrid(self, split_configs: dict, ticks=50000,
+                     hybrid_mode='interleave',
+                     prog_loss_weight_mode='epoch_end',
+                     make_logs=True, log_prefix='',
+                     perform_test=False, test_segmant=2000, tests: dict = None,
+                     loss_prog_on_test: dict = None):
+        """
 
+        :param split_configs:
+        :param ticks:
+        :param hybrid_mode:
+        :param prog_loss_weight_mode:
+        :param make_logs:
+        :param log_prefix:
+        :param perform_test:
+        :param test_segmant:
+        :param tests:
+        :param loss_prog_on_test:
+        :return:
+        """
+        # Lint split_configs
+        for cur_split_key in split_configs.keys():
+            if split_configs[cur_split_key]['train_pheno'] == 'True':
+                if split_configs[cur_split_key].get('selected_pheno') is None:
+                    split_configs[cur_split_key]['selected_pheno'] = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_pheno}
+                    warnings.warn(
+                        "(To silence, specify phenotype selection explicitly in the config file.) Selecting all included phenotypes and linked losses and regularizations:" + str(
+                            split_configs[cur_split_key]['selected_pheno']))
+            else:
+                if split_configs[cur_split_key].get('selected_pheno') is not None:
+                    raise ValueError(
+                        "Inconsistent training specification, specified phenotype to include in training but surpressed phenotype training.")
 
-    def train_story(self, story:list):
+            if split_configs[cur_split_key]['train_signature'] == 'True':
+                if split_configs[cur_split_key].get('selected_signature') is None:
+                    split_configs[cur_split_key]['selected_signature'] = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_signature}
+                    warnings.warn(
+                        "(To silence, specify signature selection explicitly in the config file.) Selecting all included signatures and linked losses and regularizations: " + str(
+                            split_configs[cur_split_key]['selected_signature']))
+            else:
+                if split_configs[cur_split_key].get('selected_signature') is not None:
+                    raise ValueError(
+                        "Inconsistent training specification, specified signature to include in training but surpressed signature training.")
+            if split_configs[cur_split_key].get('batch_size') is None:
+                warnings.warn(
+                    "(To slience, specify batch_size explicitly in the config file.) Using default batch_size 50.")
+                split_configs[cur_split_key]['batch_size'] = 50
+
+        # Setup splits
+        split_masks = dict()
+        split_samplers = dict()
+        split_iters = dict()
+        for cur_split_key in split_configs.keys():
+            split_masks[cur_split_key] = self.splits[split_configs[cur_split_key]['use_split']]
+            split_samplers[cur_split_key] = torch.utils.data.BatchSampler(
+                sampler=torch.utils.data.SubsetRandomSampler(
+                    np.arange(len(self.count_data))[split_masks[cur_split_key]]
+                ),
+                batch_size=split_configs[cur_split_key].get('batch_size', 50),
+                drop_last=False
+            )
+            split_iters[cur_split_key] = iter(split_samplers[cur_split_key])
+
+        if hybrid_mode == 'interleave':
+            # Round robin all given splits one by one
+            cur_split_idx = 0
+            for cur_tick in range(ticks):
+                # Select split
+                if cur_split_idx == len(split_configs):
+                    cur_split_idx = 0
+                cur_split_key = list(split_configs.keys())[cur_split_idx]
+                cur_split_idx += 1
+
+                if self.verbose:
+                    print("Hybrid tick", cur_tick, ":", cur_split_key)
+
+                # Make batch and maintain iterator
+                try:
+                    cur_idx = next(split_iters[cur_split_key])
+                    cur_batch = self.count_data[cur_idx]
+                except StopIteration:
+                    # Reset interator from sampler
+                    split_iters[cur_split_key] = iter(split_samplers[cur_split_key])
+
+                    if self.verbose:
+                        print(cur_split_key, "reached the end out epoch.")
+
+                    if prog_loss_weight_mode == 'epoch_end':
+                        self.controller.next_epoch(prog_main=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                                                   prog_pheno=(split_configs[cur_split_key]['train_pheno'] == 'True'),
+                                                   selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
+                                                   prog_signature=(split_configs[cur_split_key]['train_signature'] == 'True'),
+                                                   selected_signature=split_configs[cur_split_key].get('selected_signature'))
+                    cur_idx = next(split_iters[cur_split_key])
+                    cur_batch = self.count_data[cur_idx]
+
+                # Train
+                controller_ret = self.controller.train(batch=cur_batch,
+                                                       backward_reconstruction_loss=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                                                       backward_main_latent_regularization=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                                                       backward_pheno_loss=(split_configs[cur_split_key]['train_pheno'] == 'True'),
+                                                       selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
+                                                       backward_signature_loss=(split_configs[cur_split_key]['train_signature'] == 'True'),
+                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'))
+
+                # Log
+                if make_logs:
+                    self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
+                                         loss_name_prefix=log_prefix)
+                self.controller.tick()
+
+                # Test
+                if perform_test and (cur_tick + 1) % test_segmant == 0:
+                    # Perform test
+                    for cur_test in tests:
+                        # When test, all latents will be evaluated
+                        self.test(split_id=cur_test['on_split'],
+                                  test_main=True,
+                                  test_pheno=True, selected_pheno=None,
+                                  test_signature=True, selected_signature=None,
+                                  make_logs=(cur_test.get('make_logs') == 'True'),
+                                  log_prefix=cur_test.get('log_prefix', 'test'),
+                                  dump_latent=(cur_test.get('dump_latent') == 'True'),
+                                  latent_prefix=cur_test.get('latent_prefix', ''))
+
+                    if prog_loss_weight_mode == 'on_test':
+                        self.controller.next_epoch(prog_main=(loss_prog_on_test['prog_main'] == 'True'),
+                                                   prog_pheno=(loss_prog_on_test['train_pheno'] == 'True'),
+                                                   selected_pheno=loss_prog_on_test.get('selected_pheno'),
+                                                   prog_signature=(loss_prog_on_test['train_signature'] == 'True'),
+                                                   selected_signature=loss_prog_on_test.get('selected_signature'))
+
+        elif hybrid_mode == 'pattern':
+            # Progress batches by given pattern
+            raise NotImplementedError
+        elif hybrid_mode == 'sum':
+            # Forward all splits simultaneously, then sum the loss and backward althgether
+            for cur_tick in range(ticks):
+                # Collect all losses
+                cur_losses = dict()
+                for cur_split_key in split_configs.keys():
+                    # Make batch and maintain iterator
+                    try:
+                        cur_idx = next(split_iters[cur_split_key])
+                        cur_batch = self.count_data[cur_idx]
+                    except StopIteration:
+                        # Reset interator from sampler
+                        split_iters[cur_split_key] = iter(split_samplers[cur_split_key])
+
+                        if self.verbose:
+                            print(cur_split_key, "reached the end out epoch.")
+
+                        if prog_loss_weight_mode == 'epoch_end':
+                            self.controller.next_epoch(prog_main=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                                                       prog_pheno=(split_configs[cur_split_key]['train_pheno'] == 'True'),
+                                                       selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
+                                                       prog_signature=(split_configs[cur_split_key]['train_signature'] == 'True'),
+                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'))
+                        cur_batch = next(split_iters[cur_split_key])
+
+                    # Obtain loss
+                    cur_losses[cur_split_key] = self.controller.train(batch=cur_batch,
+                                                                      backward_reconstruction_loss=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                                                                      backward_main_latent_regularization=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                                                                      backward_pheno_loss=(split_configs[cur_split_key]['train_pheno'] == 'True'),
+                                                                      selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
+                                                                      backward_signature_loss=(split_configs[cur_split_key]['train_signature'] == 'True'),
+                                                                      selected_signature=split_configs[cur_split_key].get('selected_signature'),
+                                                                      suppress_backward=True)
+
+            raise NotImplementedError
+
+    def train_story(self, story: list):
         for cur_story_item in story:
             # Verbose logging
             if self.verbose:
@@ -522,6 +700,22 @@ class SAKRA(object):
                           log_prefix=cur_story_item.get('log_prefix', 'test'),
                           dump_latent=(cur_story_item.get('dump_latent') == 'True'),
                           latent_prefix=cur_story_item.get('latent_prefix', ''))
+            elif cur_action == 'train_hybrid':
+                # Verbose logging
+                if self.verbose:
+                    print("Hybrid training invoked.")
+                self.train_hybrid(split_configs=cur_story_item['split_configs'],
+                                  ticks=cur_story_item.get('ticks'),
+                                  hybrid_mode=cur_story_item.get('hybrid_mode'),
+                                  prog_loss_weight_mode=cur_story_item.get('prog_loss_weight_mode'),
+                                  make_logs=(cur_story_item.get('make_logs') == 'True'),
+                                  log_prefix=cur_story_item.get('log_prefix', ''),
+                                  perform_test=(cur_story_item.get('perform_test') == 'True'),
+                                  test_segmant=cur_story_item.get('test_segment'),
+                                  tests=cur_story_item.get('tests'),
+                                  loss_prog_on_test=cur_story_item.get('loss_prog_on_test')
+                                  )
+
             elif cur_action == 'checkpoint':
                 # TODO: save model and optimizer state for resuming
                 raise NotImplementedError
@@ -536,4 +730,4 @@ if __name__ == '__main__':
     print('Working directory:', os.getcwd())
 
     args = parse_args()
-    instance = SAKRA(config_json_path=args.config, verbose=args.verbose)
+    instance = SAKRA(config_json_path=args.config, verbose=args.verbose, suppress_train=args.suppress_train)

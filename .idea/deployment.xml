@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" promptOnRemoteOverwrite="CHECK_CONTENT" serverName="HPC9" createEmptyFolders="true">
+  <component name="PublishConfigData" promptOnRemoteOverwrite="CHECK_CONTENT" serverName="HPC9" createEmptyFolders="true" showExcludedInSync="true">
     <serverData>
       <paths name="HPC9">
         <serverdata>

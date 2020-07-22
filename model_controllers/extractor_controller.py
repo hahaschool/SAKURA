@@ -559,7 +559,8 @@ class ExtractorController(object):
     def train(self, batch,
               backward_reconstruction_loss=True, backward_main_latent_regularization=True,
               backward_pheno_loss=True, selected_pheno: dict = None,
-              backward_signature_loss=True, selected_signature: dict = None):
+              backward_signature_loss=True, selected_signature: dict = None,
+              suppress_backward=False):
         """
         Train model using specified batch.
         :param batch: batched data, obtained from rna_count dataset
@@ -569,6 +570,7 @@ class ExtractorController(object):
         :param selected_pheno: a list of selected phenotype to backward, default None; when None, all phenotypes set when initializing the Controller object will be used
         :param backward_signature_loss: should optimize/backward signature-related loss, default True
         :param selected_signature: a list of selected signatures to backward, default None; when None, all signatures set when initializing the Controller object will be selected
+        :param suppress_backward: should backward of sum of losses be suppressed (useful when external training agent override the control)
         :return: A dict, containing losses used in this training tick
         """
         # Switch model to train mode
@@ -613,14 +615,18 @@ class ExtractorController(object):
 
         loss['total_loss_backwarded'] = total_loss
 
+        # Verbose output for debug
+        if self.verbose:
+            print(loss)
+
+        if suppress_backward:
+            # Directly return loss dict when backward is suppressed
+            return loss
+
         # Optimizer
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
-
-        # Verbose output for debug
-        if self.verbose:
-            print(loss)
 
         return loss
 
