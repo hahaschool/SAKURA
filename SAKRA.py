@@ -631,13 +631,20 @@ class SAKRA(object):
                                                    selected_signature=loss_prog_on_test.get('selected_signature'))
 
         elif hybrid_mode == 'pattern':
-            # Progress batches by given pattern
+            # TODO: Progress batches by given pattern (or even more advanced, interleaving + sum mixturn, seems not so useful currently)
             raise NotImplementedError
         elif hybrid_mode == 'sum':
             # Forward all splits simultaneously, then sum the loss and backward althgether
             for cur_tick in range(ticks):
+                # Verbose loggings
+                if self.verbose:
+                    print("Hybrid tick", cur_tick, ": summing", split_configs.keys())
+
                 # Collect all losses
                 cur_losses = dict()
+                total_loss = torch.Tensor([0.])
+                if self.device == 'cuda':
+                    total_loss.cuda()
                 for cur_split_key in split_configs.keys():
                     # Make batch and maintain iterator
                     try:
@@ -656,7 +663,8 @@ class SAKRA(object):
                                                        selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
                                                        prog_signature=(split_configs[cur_split_key]['train_signature'] == 'True'),
                                                        selected_signature=split_configs[cur_split_key].get('selected_signature'))
-                        cur_batch = next(split_iters[cur_split_key])
+                        cur_idx = next(split_iters[cur_split_key])
+                        cur_batch = self.count_data[cur_idx]
 
                     # Obtain loss
                     cur_losses[cur_split_key] = self.controller.train(batch=cur_batch,
@@ -667,8 +675,38 @@ class SAKRA(object):
                                                                       backward_signature_loss=(split_configs[cur_split_key]['train_signature'] == 'True'),
                                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'),
                                                                       suppress_backward=True)
+                    total_loss += cur_losses[cur_split_key]['total_loss_backwarded']
+                    # Log
+                    if make_logs:
+                        self.logger.log_loss(trainer_output=cur_losses[cur_split_key], tick=self.controller.cur_tick,
+                                             loss_name_prefix=log_prefix)
+                    self.controller.tick()
 
-            raise NotImplementedError
+                # Execute backward
+                self.controller.optimizer.zero_grad()
+                total_loss.backward()
+                self.controller.optimizer.step()
+
+                # Test
+                if perform_test and (cur_tick + 1) % test_segmant == 0:
+                    # Perform test
+                    for cur_test in tests:
+                        # When test, all latents will be evaluated
+                        self.test(split_id=cur_test['on_split'],
+                                  test_main=True,
+                                  test_pheno=True, selected_pheno=None,
+                                  test_signature=True, selected_signature=None,
+                                  make_logs=(cur_test.get('make_logs') == 'True'),
+                                  log_prefix=cur_test.get('log_prefix', 'test'),
+                                  dump_latent=(cur_test.get('dump_latent') == 'True'),
+                                  latent_prefix=cur_test.get('latent_prefix', ''))
+
+                    if prog_loss_weight_mode == 'on_test':
+                        self.controller.next_epoch(prog_main=(loss_prog_on_test['prog_main'] == 'True'),
+                                                   prog_pheno=(loss_prog_on_test['train_pheno'] == 'True'),
+                                                   selected_pheno=loss_prog_on_test.get('selected_pheno'),
+                                                   prog_signature=(loss_prog_on_test['train_signature'] == 'True'),
+                                                   selected_signature=loss_prog_on_test.get('selected_signature'))
 
     def train_story(self, story: list):
         for cur_story_item in story:
