@@ -56,7 +56,7 @@ try({
       output_height <- 15
       # for (i in 8:total_epochs) {
       #for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in c(8, 17, 26, 36, 45, 54, 73, 82, 92, 101, 110, 120, 129, 138, 147, 156, 165, 175, 184, 193, 203, 212, 221, 230)) {
+      for (i in c(17, 36, 54, 73, 92, 110, 129, 147, 165, 184, 203, 221, 240, 258, 277, 295, 313, 332, 351, 369, 407, 425, 443, 461)) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -90,7 +90,7 @@ try({
       output_height <- 15
       # for (i in 7:total_epochs) {
       # for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in c(8, 17, 26, 36, 45, 54, 73, 82, 92, 101, 110, 120, 129, 138, 147, 156, 165, 175, 184, 193, 203, 212, 221, 230)) {
+      for (i in c(17, 36, 54, 73, 92, 110, 129, 147, 165, 184, 203, 221, 240, 258, 277, 295, 313, 332, 351, 369, 407, 425, 443, 461)) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -122,7 +122,7 @@ try({
       output_width <- 15
       output_height <- 15
       #for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in c(8, 17, 26, 36, 45, 54, 73, 82, 92, 101, 110, 120, 129, 138, 147, 156, 165, 175, 184, 193, 203, 212, 221, 230)) {
+      for (i in c(17, 36, 54, 73, 92, 110, 129, 147, 165, 184, 203, 221, 240, 258, 277, 295, 313, 332, 351, 369, 407, 425, 443, 461)) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
