@@ -18,11 +18,11 @@ getwd()
 # Configuration
 
 ```{r paths}
-emb_path <- '../EX08_03/logs'
-pheno_df_path <- "../../dataset/10X_PBMC_integrated_purified_and_cite/pheno.csv"
-expr_mat_path <- "../../dataset/10X_PBMC_integrated_purified_and_cite/cleaned_log_unfiltered_expr_mat.mtx"
-gene_name_path <- "../../dataset/10X_PBMC_integrated_purified_and_cite/cleaned_log_unfiltered_gene_names.csv"
-cell_name_path <- "../../dataset/10X_PBMC_integrated_purified_and_cite/cleaned_log_unfiltered_cell_names.csv"
+emb_path <- './runs/EX08_07/logs'
+pheno_df_path <- "./dataset/10X_PBMC_integrated_purified_and_cite/pheno.csv"
+expr_mat_path <- "./dataset/10X_PBMC_integrated_purified_and_cite/cleaned_log_unfiltered_expr_mat.mtx"
+gene_name_path <- "./dataset/10X_PBMC_integrated_purified_and_cite/cleaned_log_unfiltered_gene_names.csv"
+cell_name_path <- "./dataset/10X_PBMC_integrated_purified_and_cite/cleaned_log_unfiltered_cell_names.csv"
 ```
 
 # Import Labels
@@ -46,7 +46,7 @@ total_epochs <- 200
 ## Main latent plots (main.1 and main.2)
 
 
-```{r signature latent plots}
+```{r main latent plots}
 try({
       keys_to_plot <- c("merged_overall_train_all_latent")
       #keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
@@ -54,8 +54,9 @@ try({
       #                  "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
       output_width <- 15
       output_height <- 15
+      # for (i in 8:total_epochs) {
       #for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in sort(c(seq(5, total_epochs, 20), seq(20, total_epochs, 20)))) {
+      for (i in c(8, 17, 26, 36, 45, 54, 73, 82, 92, 101, 110, 120, 129, 138, 147, 156, 165, 175, 184, 193, 203, 212, 221, 230)) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -68,7 +69,7 @@ try({
             theme_classic() +
             theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- '../EX08_03/plots/main_lat'
+          plt_path <- './runs/EX08_07/plots/main_lat'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_main.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
@@ -81,14 +82,15 @@ try({
 
 ```{r data_key distrib}
 try({
-      keys_to_plot <- c("merged_overall_train_all_latent")
+      keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent")
       #keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
       #                  "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
       #                  "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
       output_width <- 15
       output_height <- 15
-      #for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in sort(c(seq(5, total_epochs, 20), seq(20, total_epochs, 20)))) {
+      # for (i in 7:total_epochs) {
+      # for (i in c(seq(1, total_epochs, 9), total_epochs)) {
+      for (i in c(8, 17, 26, 36, 45, 54, 73, 82, 92, 101, 110, 120, 129, 138, 147, 156, 165, 175, 184, 193, 203, 212, 221, 230)) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -100,7 +102,7 @@ try({
             theme_classic() +
             theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- '../EX08_03/plots/data_key_distrib'
+          plt_path <- './runs/EX08_07/plots/data_key_distrib'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_data_key.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
@@ -120,7 +122,7 @@ try({
       output_width <- 15
       output_height <- 15
       #for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in sort(c(seq(5, 150, 20), seq(20, 150, 20)))) {
+      for (i in c(8, 17, 26, 36, 45, 54, 73, 82, 92, 101, 110, 120, 129, 138, 147, 156, 165, 175, 184, 193, 203, 212, 221, 230)) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
@@ -132,7 +134,7 @@ try({
             theme_classic() +
             theme(legend.position = 'bottom')
           plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- '../EX08_03/plots/protein_markers_distrib'
+          plt_path <- './runs/EX08_07/plots/protein_markers_distrib'
           system(paste0('mkdir -p ', plt_path))
           plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_protein_markers.jpg')
           ggsave(plt, filename = plt_filename, width = output_width, height = output_height)

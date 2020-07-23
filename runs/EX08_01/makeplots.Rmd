@@ -111,13 +111,11 @@ try({
 ### Cell distribution in latent
 ```{r signature distrib}
 try({
-      keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
-                        "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
-                        "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
+      keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent")
       output_width <- 15
       output_height <- 15
-      # for (i in c(seq(1, total_epochs, 9), total_epochs)) {
-      for (i in 90:100) {
+      for (i in seq(5, total_epochs, 5)) {
+        # for (i in 90:100) {
         for (cur_key in keys_to_plot) {
           emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
           cur_emb <- read.csv(emb_filename) %>%
