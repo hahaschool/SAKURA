@@ -55,6 +55,10 @@
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_07/plots" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_08/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX08_08/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_09/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_09/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_10/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX08_10/plots" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
     <orderEntry type="inheritedJdk" />
