@@ -370,17 +370,19 @@ class ExtractorController(object):
         :return:
         """
         if mode == 'keys':
+            keys_to_ret = list()
             if selection is None or selection == '*':
                 # Select all in internal config
-                return internal.keys()
+                keys_to_ret = internal.keys()
             elif type(selection) is dict:
-                return selection.keys()
+                keys_to_ret = selection.keys()
             elif type(selection) is list:
-                return selection
+                keys_to_ret = selection
             elif type(selection) is str:
-                return [selection]
+                keys_to_ret = [selection]
             else:
                 raise ValueError
+            return keys_to_ret
         elif mode == 'dict':
             if selection is None or selection == '*':
                 return {idx: '*' for idx in internal.keys()}
@@ -411,27 +413,71 @@ class ExtractorController(object):
         :return:
         """
         # Forward model (obtain pre-loss-calculated tensors)
-        if forward_reconstruction:
-            # When reconstruction is on, all latents should be forwarded, though loss could be backwarded partially
-            fwd_res = self.model(batch['expr'][expr_key],
-                                 forward_main_latent=forward_main_latent,
-                                 forward_reconstruction=forward_reconstruction,
-                                 forward_signature=forward_signature,
-                                 selected_signature=self.select_item_dict(selection='*',
-                                                                          internal=self.signature_config),
-                                 forward_pheno=forward_pheno,
-                                 selected_pheno=self.select_item_dict(selection='*',
-                                                                      internal=self.pheno_config))
-        else:
-            fwd_res = self.model(batch['expr'][expr_key],
-                                 forward_main_latent=forward_main_latent,
-                                 forward_reconstruction=forward_reconstruction,
-                                 forward_signature=forward_signature,
-                                 selected_signature=self.select_item_dict(selection=selected_signature,
-                                                                          internal=self.signature_config),
-                                 forward_pheno=forward_pheno,
-                                 selected_pheno=self.select_item_dict(selection=selected_pheno,
-                                                                      internal=self.pheno_config))
+        signature_select_fwd = list()
+        if forward_signature:
+            signature_select_fwd = self.select_item_dict(selection=selected_signature, internal=self.signature_config)
+        pheno_select_fwd = list()
+        if forward_pheno:
+            pheno_select_fwd = self.select_item_dict(selection=selected_pheno, internal=self.pheno_config)
+        main_fwd = forward_main_latent
+        rec_fwd = forward_reconstruction
+        signature_attach_req_set = set(signature_select_fwd)
+        pheno_attach_req_set = set(pheno_select_fwd)
+        for cur_key in pheno_select_fwd:
+            model_details = self.pheno_config[cur_key].get('model')
+            if model_details is not None:
+                if model_details.get('attach') == 'True':
+                    if model_details['attach_to'] == 'signature_lat':
+                        signature_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'pheno_lat':
+                        pheno_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'main_lat':
+                        main_fwd = True
+                    elif model_details['attach_to'] == 'all_lat':
+                        rec_fwd = True
+                    elif model_details['attach_to'] == 'multiple':
+                        for cur_attach in model_details['attach_key']:
+                            if cur_attach['type'] == 'pheno':
+                                pheno_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'signature':
+                                signature_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'main':
+                                main_fwd = True
+        for cur_key in signature_select_fwd:
+            model_details = self.signature_config[cur_key].get('model')
+            if model_details is not None:
+                if model_details.get('attach') == 'True':
+                    if model_details['attach_to'] == 'signature_lat':
+                        signature_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'pheno_lat':
+                        pheno_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'main_lat':
+                        main_fwd = True
+                    elif model_details['attach_to'] == 'all_lat':
+                        rec_fwd = True
+                    elif model_details['attach_to'] == 'multiple':
+                        for cur_attach in model_details['attach_key']:
+                            if cur_attach['type'] == 'pheno':
+                                pheno_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'signature':
+                                signature_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'main':
+                                main_fwd = True
+        signature_select_fwd = list(signature_attach_req_set)
+        pheno_select_fwd = list(pheno_attach_req_set)
+        if rec_fwd:
+            signature_select_fwd = '*'
+            pheno_select_fwd = '*'
+        signature_select_fwd = self.select_item_dict(selection=signature_select_fwd, internal=self.signature_config)
+        pheno_select_fwd = self.select_item_dict(selection=pheno_select_fwd, internal=self.pheno_config)
+
+        fwd_res = self.model(batch['expr'][expr_key],
+                             forward_main_latent=main_fwd,
+                             forward_reconstruction=rec_fwd,
+                             forward_signature=forward_signature,
+                             selected_signature=signature_select_fwd,
+                             forward_pheno=forward_pheno,
+                             selected_pheno=pheno_select_fwd)
 
         # Reconstruction Loss
         main_loss = {'loss': dict(), 'regularization': dict()}
