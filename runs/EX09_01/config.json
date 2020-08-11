@@ -1,5 +1,5 @@
 {
-  "remarks": "Initial testing of integrated v1/v3/v31 dataset, directly taking targeted dataset as input with unlogged genes as zeroes",
+  "remarks": "Initial testing of integrated v1/v3/v31 dataset, directly taking targeted dataset as input with unlogged genes as zeroes. (Plan A)",
   "log_path": "./runs/EX09_01/logs/",
   "reproducible": "True",
   "rnd_seed": 114514,
@@ -121,7 +121,7 @@
               "regularization": "*"
             },
             "protein_markers": {
-              "loss": "*",
+              "loss": [],
               "regularization": "*"
             },
             "source": {
