@@ -25,7 +25,9 @@ def parse_args():
     parser.add_argument('-c', '--config', type=str, default='./config.json', help='model config JSON path')
     parser.add_argument('-v', '--verbose', type=bool, default=False, help='verbose console outputs')
     parser.add_argument('-s', '--suppress_train', type=bool, default=False, help='suppress model training, only setup dataset and model')
+    parser.add_argument('-r', '--resume', type=str, default='', help='resume training process from saved checkpoint file')
     return parser.parse_args()
+
 
 class SAKRA(object):
     def __init__(self, config_json_path, verbose=False, suppress_train=False):
@@ -51,12 +53,12 @@ class SAKRA(object):
             torch.manual_seed(self.rnd_seed)
             np.random.seed(self.rnd_seed)
             random.seed(self.rnd_seed)
-            if self.device == 'cuda':
-                torch.cuda.manual_seed(self.rnd_seed)
-                torch.cuda.manual_seed_all(self.rnd_seed)
-                torch.backends.cudnn.enabled = False
-                torch.backends.cudnn.benchmark = False
-                torch.backends.cudnn.deterministic = True
+            os.environ['PYTHONHASHSEED'] = str(self.rnd_seed)
+            torch.cuda.manual_seed(self.rnd_seed)
+            torch.cuda.manual_seed_all(self.rnd_seed)
+            torch.backends.cudnn.enabled = False
+            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
 
         # Setup dataset
         self.setup_dataset()
@@ -93,7 +95,7 @@ class SAKRA(object):
         if self.config['dump_splits'] == 'True':
             self.logger.save_splits(self.splits, self.log_path + '/splits.pkl')
 
-        # [Debugging option] suppress training
+        # suppress training if needed (debug, or in case to resume)
         if suppress_train:
             return
 
@@ -369,7 +371,9 @@ class SAKRA(object):
               epoch=50, batch_size=100,
               tick_controller_epoch=True,
               make_logs=True, dump_latent=True, log_prefix='train', latent_prefix='',
-              test_every_epoch=False, test_on_segment=False, test_segment=2000, tests=None):
+              test_every_epoch=False, test_on_segment=False, test_segment=2000, tests=None,
+              checkpoint_on_segment=False, checkpoint_segment=2000, checkpoint_prefix='', checkpoint_save_arch=False,
+              resume=False, resume_dict=None):
         """
         Batch train model for at least one epoch.
         :param split_id: (str) id of the split to be used in this train
@@ -389,6 +393,11 @@ class SAKRA(object):
         :param latent_prefix: (str) the prefix to be added after log_prefix to latent embedding filename
         :param test_every_epoch: (bool) should test/evaluation be performed after finishing each epochs
         :param tests: (list of dict) test configurations
+        :param checkpoint_on_segment: (bool) should model be checkpointed after a certain tick interval
+        :param checkpoint_segment: (int) checkpoint segment length
+        :param checkpoint_prefix: (int) filename prefix for checkpoint files
+        :param resume: (bool) should resume from saved training session
+        :param resume_dict: (bool) session state dict used for resuming previous training
         :return:
         """
 
@@ -422,30 +431,52 @@ class SAKRA(object):
         # Split mask
         selected_split_mask = self.splits[split_id]
 
+        # Setup sampler
+        sampler = torch.utils.data.BatchSampler(
+            sampler=torch.utils.data.SubsetRandomSampler(
+                np.arange(len(self.count_data))[selected_split_mask]
+            ),
+            batch_size=batch_size,
+            drop_last=False
+        )
+
         # Local tick for segmental test
         cur_tick = 0
+        cur_epoch = 0
+
+        # Resume flag
+        to_resume_flag = resume
+
+        # Handle resume
+        if resume and to_resume_flag:
+            cur_epoch = resume_dict['cur_epoch']
 
         # Train epochs
-        for cur_epoch in range(epoch):
-            # Local tick
-            cur_tick += 1
+        while cur_epoch < epoch:
+            # Persist training state for resume
+            resume_dict['cur_epoch'] = cur_epoch
 
-            # Begin epoch
-            if tick_controller_epoch:
-                self.controller.next_epoch(prog_main=train_main,
-                                           prog_pheno=train_pheno, selected_pheno=selected_pheno,
-                                           prog_signature=train_signature, selected_signature=selected_signature)
-            # TODO: selective training
-            # Set sampler
-            sampler = torch.utils.data.BatchSampler(
-                sampler=torch.utils.data.SubsetRandomSampler(
-                    np.arange(len(self.count_data))[selected_split_mask]
-                ),
-                batch_size=batch_size,
-                drop_last=False
-            )
+            # Handle resuming/persisting sampler
+            if resume and to_resume_flag:
+                sampler = resume_dict['sampler']
+                idx_list = resume_dict['idx_list']
+                # When resume, start from the next tick/idx_idx
+                cur_tick = resume_dict['cur_tick']
+                idx_idx = resume_dict['idx_idx']
+                # Resume finished
+                to_resume_flag = False
+            else:
+                # Preload indices for resumption
+                idx_list = list()
+                for cur_idx in iter(sampler):
+                    idx_list.append(cur_idx)
 
-            for cur_idx in sampler:
+                # Persist sampler and index for resume
+                resume_dict['idx_list'] = idx_list
+                resume_dict['sampler'] = sampler
+                idx_idx = 0
+
+            for cur_idx in idx_list[idx_idx:]:
                 cur_batch = self.count_data[cur_idx]
                 controller_ret = self.controller.train(batch=cur_batch,
                                                        backward_reconstruction_loss=train_main,
@@ -453,10 +484,15 @@ class SAKRA(object):
                                                        backward_pheno_loss=train_pheno, selected_pheno=selected_pheno,
                                                        backward_signature_loss=train_signature,
                                                        selected_signature=selected_signature)
+
+                # Verbose logging
+                if self.verbose:
+                    print(cur_batch['cell_key'][:10])
+
+                # Make logs
                 if make_logs:
                     self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
                                          loss_name_prefix=log_prefix)
-                self.controller.tick()
 
                 # Segmental Test
                 if test_on_segment and (cur_tick + 1) % test_segment == 0:
@@ -472,6 +508,33 @@ class SAKRA(object):
                                   dump_latent=(cur_test.get('dump_latent') == 'True'),
                                   latent_prefix=cur_test.get('latent_prefix', ''))
 
+                # Tick controller
+                self.controller.tick()
+
+                # When checkpoint: current epoch, current tick, current idx_idx, model ticked
+                # When resume: stay epoch, next tick, next idx_idx, stay model (as it has already been ticked)
+                cur_tick += 1
+                idx_idx += 1
+
+                # Persist indices for resuming
+                resume_dict['cur_tick'] = cur_tick
+                resume_dict['idx_idx'] = idx_idx
+
+                # Segmental checkpoint
+                if checkpoint_on_segment and cur_tick % checkpoint_segment == 0:
+                    # Save checkpoint
+                    self.save_checkpoint(training_state=resume_dict,
+                                         checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(cur_tick) + '.pth',
+                                         save_model_arch=checkpoint_save_arch)
+
+            # Begin new epoch (if resuming, skip)
+            if tick_controller_epoch:
+                self.controller.next_epoch(prog_main=train_main,
+                                           prog_pheno=train_pheno, selected_pheno=selected_pheno,
+                                           prog_signature=train_signature, selected_signature=selected_signature)
+            cur_epoch += 1
+            resume_dict['cur_epoch'] = cur_epoch
+
             # Epoch-wise test
             if test_every_epoch:
                 for cur_test in tests:
@@ -486,7 +549,7 @@ class SAKRA(object):
                               latent_prefix=cur_test.get('latent_prefix', ''))
 
         # Terminal test if segmental test is on
-        if test_on_segment:
+        if test_on_segment and (test_every_epoch == False):
             # Perform test
             for cur_test in tests:
                 # When test, all latents will be evaluated
@@ -499,6 +562,12 @@ class SAKRA(object):
                           dump_latent=(cur_test.get('dump_latent') == 'True'),
                           latent_prefix=cur_test.get('latent_prefix', ''))
 
+        # Terminal checkpoint when segmental checkpoint is on
+        if checkpoint_on_segment:
+            # Save checkpoint
+            self.save_checkpoint(training_state=resume_dict,
+                                 checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(cur_tick) + '.pth',
+                                 save_model_arch=checkpoint_save_arch)
 
     def test(self, split_id,
              test_main=True,
@@ -537,7 +606,9 @@ class SAKRA(object):
                      prog_loss_weight_mode='epoch_end',
                      make_logs=True, log_prefix='',
                      perform_test=False, test_segmant=2000, tests: dict = None,
-                     loss_prog_on_test: dict = None):
+                     perform_checkpoint=False, checkpoint_segment=2000, checkpoint_prefix='', checkpoint_save_arch=False,
+                     loss_prog_on_test: dict = None,
+                     resume=False, resume_dict=None):
         """
 
         :param split_configs:
@@ -580,53 +651,88 @@ class SAKRA(object):
                     "(To slience, specify batch_size explicitly in the config file.) Using default batch_size 50.")
                 split_configs[cur_split_key]['batch_size'] = 50
 
+        # Resume flag
+        to_resume_flag = resume
+
         # Setup splits
-        split_masks = dict()
-        split_samplers = dict()
-        split_iters = dict()
-        for cur_split_key in split_configs.keys():
-            split_masks[cur_split_key] = self.splits[split_configs[cur_split_key]['use_split']]
-            split_samplers[cur_split_key] = torch.utils.data.BatchSampler(
-                sampler=torch.utils.data.SubsetRandomSampler(
-                    np.arange(len(self.count_data))[split_masks[cur_split_key]]
-                ),
-                batch_size=split_configs[cur_split_key].get('batch_size', 50),
-                drop_last=False
-            )
-            split_iters[cur_split_key] = iter(split_samplers[cur_split_key])
+        split_masks = dict()  # Masks for each splits
+        split_samplers = dict()  # Samplers
+        split_iters = dict()  # Dictionary of actual indices (persisted as list to support resume)
+        split_idx_idx = dict()  # Index of index for each split
+
+        if resume and to_resume_flag:
+            # Resume samplers and idx_idx (automatically progressed to next)
+            split_samplers = resume_dict['split_samplers']
+            split_iters = resume_dict['split_iters']
+            split_idx_idx = resume_dict['split_idx_idx']
+            for cur_split_key in split_idx_idx.keys():
+                split_masks[cur_split_key] = self.splits[split_configs[cur_split_key]['use_split']]
+        else:
+            # Normally, idx_idx will reset to 0, all samplers start from new
+            for cur_split_key in split_configs.keys():
+                split_idx_idx[cur_split_key] = 0
+                split_masks[cur_split_key] = self.splits[split_configs[cur_split_key]['use_split']]
+                split_samplers[cur_split_key] = torch.utils.data.BatchSampler(
+                    sampler=torch.utils.data.SubsetRandomSampler(
+                        np.arange(len(self.count_data))[split_masks[cur_split_key]]
+                    ),
+                    batch_size=split_configs[cur_split_key].get('batch_size', 50),
+                    drop_last=False
+                )
+            # Generate and persist batches
+            for cur_split_key in split_configs.keys():
+                split_iters[cur_split_key] = list()
+                for cur_idx in iter(split_samplers[cur_split_key]):
+                    split_iters[cur_split_key].append(cur_idx)
 
         if hybrid_mode == 'interleave':
             # Round robin all given splits one by one
             cur_split_idx = 0
-            for cur_tick in range(ticks):
+            cur_tick = 0
+
+            # Handle resume
+            if resume and to_resume_flag:
+                # When resume, proceed to next split idx and tick
+                cur_split_idx = resume_dict['cur_split_idx']
+                cur_tick = resume_dict['cur_tick']
+                to_resume_flag = False
+
+            while cur_tick < ticks:
+
                 # Select split
-                if cur_split_idx == len(split_configs):
+                if cur_split_idx >= len(split_configs):
                     cur_split_idx = 0
                 cur_split_key = list(split_configs.keys())[cur_split_idx]
-                cur_split_idx += 1
 
                 if self.verbose:
                     print("Hybrid tick", cur_tick, ":", cur_split_key)
+                    print(split_idx_idx)
 
                 # Make batch and maintain iterator
-                try:
-                    cur_idx = next(split_iters[cur_split_key])
-                    cur_batch = self.count_data[cur_idx]
-                except StopIteration:
-                    # Reset interator from sampler
-                    split_iters[cur_split_key] = iter(split_samplers[cur_split_key])
+                if split_idx_idx[cur_split_key] >= len(split_iters[cur_split_key]):
+                    # Regenerate index is required
+                    split_iters[cur_split_key] = list()
+                    for cur_idx in iter(split_samplers[cur_split_key]):
+                        split_iters[cur_split_key].append(cur_idx)
+                    split_idx_idx[cur_split_key] = 0
 
+                    # Verbose logging
                     if self.verbose:
                         print(cur_split_key, "reached the end out epoch.")
 
+                    # Progress epoch
                     if prog_loss_weight_mode == 'epoch_end':
                         self.controller.next_epoch(prog_main=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
                                                    prog_pheno=(split_configs[cur_split_key]['train_pheno'] == 'True'),
                                                    selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
                                                    prog_signature=(split_configs[cur_split_key]['train_signature'] == 'True'),
                                                    selected_signature=split_configs[cur_split_key].get('selected_signature'))
-                    cur_idx = next(split_iters[cur_split_key])
-                    cur_batch = self.count_data[cur_idx]
+
+                cur_idx = split_iters[cur_split_key][split_idx_idx[cur_split_key]]
+                cur_batch = self.count_data[cur_idx]
+
+                if self.verbose:
+                    print(cur_batch['cell_key'][:10])
 
                 # Train
                 controller_ret = self.controller.train(batch=cur_batch,
@@ -641,10 +747,22 @@ class SAKRA(object):
                 if make_logs:
                     self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
                                          loss_name_prefix=log_prefix)
+
+                # Proceed to next tick, tick controller (so that when resume, the model has already been on next tick)
                 self.controller.tick()
+                cur_split_idx += 1
+                cur_tick += 1
+                split_idx_idx[cur_split_key] += 1
+
+                # Persist split index and tick for resume
+                resume_dict['cur_split_idx'] = cur_split_idx
+                resume_dict['cur_tick'] = cur_tick
+                resume_dict['split_idx_idx'] = split_idx_idx
+                resume_dict['split_samplers'] = split_samplers
+                resume_dict['split_iters'] = split_iters
 
                 # Test
-                if perform_test and (cur_tick + 1) % test_segmant == 0:
+                if perform_test and cur_tick % test_segmant == 0:
                     # Perform test
                     for cur_test in tests:
                         # When test, all latents will be evaluated
@@ -663,42 +781,66 @@ class SAKRA(object):
                                                    selected_pheno=loss_prog_on_test.get('selected_pheno'),
                                                    prog_signature=(loss_prog_on_test['train_signature'] == 'True'),
                                                    selected_signature=loss_prog_on_test.get('selected_signature'))
+                # Checkpoint
+                if perform_checkpoint and cur_tick % checkpoint_segment == 0:
+                    # Save checkpoint
+                    self.save_checkpoint(training_state=resume_dict,
+                                         checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(cur_tick) + '.pth',
+                                         save_model_arch=checkpoint_save_arch)
+
+
+
 
         elif hybrid_mode == 'pattern':
             # TODO: Progress batches by given pattern (or even more advanced, interleaving + sum mixturn, seems not so useful currently)
             raise NotImplementedError
         elif hybrid_mode == 'sum':
-            # Forward all splits simultaneously, then sum the loss and backward althgether
-            for cur_tick in range(ticks):
+            # Forward all splits simultaneously, then sum the loss and backward altogether
+            cur_tick = 0
+
+            # Handle resume
+            if resume and to_resume_flag:
+                cur_tick = resume_dict['cur_tick']
+                to_resume_flag = False
+
+            while cur_tick < ticks:
                 # Verbose loggings
                 if self.verbose:
                     print("Hybrid tick", cur_tick, ": summing loss from", list(split_configs.keys()))
 
-                # Collect all losses
+                # Tensor for collecting all losses
                 cur_losses = dict()
                 total_loss = torch.Tensor([0.])
                 if self.device == 'cuda':
                     total_loss.cuda()
+
                 for cur_split_key in split_configs.keys():
                     # Make batch and maintain iterator
-                    try:
-                        cur_idx = next(split_iters[cur_split_key])
-                        cur_batch = self.count_data[cur_idx]
-                    except StopIteration:
-                        # Reset interator from sampler
-                        split_iters[cur_split_key] = iter(split_samplers[cur_split_key])
+                    if split_idx_idx[cur_split_key] >= len(split_iters[cur_split_key]):
+                        # Regenerate index is required
+                        split_iters[cur_split_key] = list()
+                        for cur_idx in iter(split_samplers[cur_split_key]):
+                            split_iters[cur_split_key].append(cur_idx)
+                        split_idx_idx[cur_split_key] = 0
 
+                        # Verbose logging
                         if self.verbose:
                             print(cur_split_key, "reached the end out epoch.")
 
+                        # Progress epoch
                         if prog_loss_weight_mode == 'epoch_end':
                             self.controller.next_epoch(prog_main=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
                                                        prog_pheno=(split_configs[cur_split_key]['train_pheno'] == 'True'),
                                                        selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
                                                        prog_signature=(split_configs[cur_split_key]['train_signature'] == 'True'),
                                                        selected_signature=split_configs[cur_split_key].get('selected_signature'))
-                        cur_idx = next(split_iters[cur_split_key])
-                        cur_batch = self.count_data[cur_idx]
+
+                    cur_idx = split_iters[cur_split_key][split_idx_idx[cur_split_key]]
+                    cur_batch = self.count_data[cur_idx]
+
+                    if self.verbose:
+                        print("Split:", cur_split_key)
+                        print(cur_batch['cell_key'][:10])
 
                     # Obtain loss
                     cur_losses[cur_split_key] = self.controller.train(batch=cur_batch,
@@ -714,6 +856,11 @@ class SAKRA(object):
                     if make_logs:
                         self.logger.log_loss(trainer_output=cur_losses[cur_split_key], tick=self.controller.cur_tick,
                                              loss_name_prefix=log_prefix)
+
+                    # Proceed to next batch for current split
+                    split_idx_idx[cur_split_key] += 1
+
+                    # Tick controller
                     self.controller.tick()
 
                 # Execute backward
@@ -721,8 +868,17 @@ class SAKRA(object):
                 total_loss.backward()
                 self.controller.optimizer.step()
 
+                # Progress tick (of current training task) to next
+                cur_tick += 1
+
+                # Persist split index and tick for resume
+                resume_dict['cur_tick'] = cur_tick
+                resume_dict['split_idx_idx'] = split_idx_idx
+                resume_dict['split_samplers'] = split_samplers
+                resume_dict['split_iters'] = split_iters
+
                 # Test
-                if perform_test and (cur_tick + 1) % test_segmant == 0:
+                if perform_test and cur_tick % test_segmant == 0:
                     # Perform test
                     for cur_test in tests:
                         # When test, all latents will be evaluated
@@ -742,15 +898,64 @@ class SAKRA(object):
                                                    prog_signature=(loss_prog_on_test['train_signature'] == 'True'),
                                                    selected_signature=loss_prog_on_test.get('selected_signature'))
 
-    def train_story(self, story: list):
-        for cur_story_item in story:
+                # Checkpoint
+                if perform_checkpoint and cur_tick % checkpoint_segment == 0:
+                    # Save checkpoint
+                    self.save_checkpoint(training_state=resume_dict,
+                                         checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(cur_tick) + '.pth',
+                                         save_model_arch=checkpoint_save_arch)
+
+    def save_checkpoint(self, training_state=None,
+                        checkpoint_path=None,
+                        save_model_arch=False, save_config=False):
+        # Save model by controllor
+        controllor_ret = self.controller.save_checkpoint(save_model_arch=save_model_arch,
+                                                         save_config=save_config)
+        # Merge training state with controller_ret
+        controllor_ret['training_state'] = training_state
+
+        # Random state
+        controllor_ret['torch_rng_state'] = torch.get_rng_state()
+        controllor_ret['numpy_random_state'] = np.random.get_state()
+        controllor_ret['random_state'] = random.getstate()
+
+        torch.save(controllor_ret, checkpoint_path)
+
+    def load_checkpoint(self, checkpoint_path):
+        checkpoint = torch.load(checkpoint_path)
+        self.controller.load_checkpoint(state_dict=checkpoint)
+
+        # Random states
+        torch.set_rng_state(checkpoint['torch_rng_state'])
+        np.random.set_state(checkpoint['numpy_random_state'])
+        random.setstate(checkpoint['random_state'])
+
+        return checkpoint
+
+    def train_story(self, story: list,
+                    resume=False, resume_dict=None):
+        # Handle resume
+        cur_story_item_idx = 0
+        if resume:
+            cur_story_item_idx = resume_dict['cur_story_item_idx']
+            if self.verbose:
+                print("To resume training from story indexed as", cur_story_item_idx)
+        else:
+            resume_dict = dict()
+
+        for cur_story_item in story[cur_story_item_idx:]:
             # Verbose logging
             if self.verbose:
                 print("Training story:", cur_story_item.get('remark'))
                 print(cur_story_item)
             cur_action = cur_story_item.get('action', 'train')
 
+            # Persist training story info for saving checkpoints
+            resume_dict['cur_story_item_idx'] = cur_story_item_idx
+
             if cur_action == 'train':
+
+                # Train model in ordinary mode
                 self.train(split_id=cur_story_item['use_split'],
                            train_main=(cur_story_item['train_main_latent'] == 'True'),
                            train_pheno=(cur_story_item['train_pheno'] == 'True'),
@@ -764,8 +969,26 @@ class SAKRA(object):
                            test_every_epoch=(cur_story_item.get('test_every_epoch') == 'True'),
                            tests=cur_story_item.get('tests'),
                            test_on_segment=(cur_story_item.get('test_on_segment') == 'True'),
-                           test_segment=cur_story_item.get('test_segment'))
+                           test_segment=cur_story_item.get('test_segment'),
+                           checkpoint_on_segment=(cur_story_item.get('checkpoint_on_segment') == 'True'),
+                           checkpoint_segment=(cur_story_item.get('checkpoint_segment', 2000)),
+                           checkpoint_prefix=(cur_story_item.get('checkpoint_prefix')),
+                           checkpoint_save_arch=(cur_story_item.get('checkpoint_save_arch') == 'True'),
+                           resume=resume, resume_dict=resume_dict)
+
+                # Handle resume completion
+                if resume:
+                    resume = False
+                    resume_dict = dict()
+
             elif cur_action == 'test':
+
+                # Ignore if resume checkpoint starts here
+                if resume:
+                    resume = False
+                    resume_dict = dict()
+
+                # Test model
                 self.test(split_id=cur_story_item['on_split'],
                           test_main=True,
                           test_pheno=True, selected_pheno=None,
@@ -774,10 +997,14 @@ class SAKRA(object):
                           log_prefix=cur_story_item.get('log_prefix', 'test'),
                           dump_latent=(cur_story_item.get('dump_latent') == 'True'),
                           latent_prefix=cur_story_item.get('latent_prefix', ''))
+
             elif cur_action == 'train_hybrid':
+
                 # Verbose logging
                 if self.verbose:
                     print("Hybrid training invoked.")
+
+                # Train model in hybrid mode
                 self.train_hybrid(split_configs=cur_story_item['split_configs'],
                                   ticks=cur_story_item.get('ticks'),
                                   hybrid_mode=cur_story_item.get('hybrid_mode'),
@@ -787,15 +1014,19 @@ class SAKRA(object):
                                   perform_test=(cur_story_item.get('perform_test') == 'True'),
                                   test_segmant=cur_story_item.get('test_segment'),
                                   tests=cur_story_item.get('tests'),
-                                  loss_prog_on_test=cur_story_item.get('loss_prog_on_test')
-                                  )
+                                  loss_prog_on_test=cur_story_item.get('loss_prog_on_test'),
+                                  perform_checkpoint=(cur_story_item.get('perform_checkpoint') == 'True'),
+                                  checkpoint_segment=(cur_story_item.get('checkpoint_segment', 2000)),
+                                  checkpoint_prefix=(cur_story_item.get('checkpoint_prefix')),
+                                  checkpoint_save_arch=(cur_story_item.get('checkpoint_save_arch') == 'True'),
+                                  resume=resume, resume_dict=resume_dict)
 
-            elif cur_action == 'checkpoint':
-                # TODO: save model and optimizer state for resuming
-                raise NotImplementedError
-            elif cur_action == 'resume':
-                # TODO: support resuming from checkpoints
-                raise NotImplementedError
+                # Handle resume completion
+                if resume:
+                    resume = False
+                    resume_dict = dict()
+
+            cur_story_item_idx += 1
 
 
 if __name__ == '__main__':
@@ -804,4 +1035,24 @@ if __name__ == '__main__':
     print('Working directory:', os.getcwd())
 
     args = parse_args()
-    instance = SAKRA(config_json_path=args.config, verbose=args.verbose, suppress_train=args.suppress_train)
+    if type(args.resume) is str and len(args.resume) > 0:
+        if args.verbose:
+            print("Resuming checkpoint:", args.resume)
+
+        # Init SAKRA instance
+        instance = SAKRA(config_json_path=args.config,
+                         verbose=args.verbose,
+                         suppress_train=True)
+
+        # Load session
+        checkpoint = instance.load_checkpoint(args.resume)
+
+        # Resume training
+        instance.train_story(story=instance.config['story'],
+                             resume=True,
+                             resume_dict=checkpoint['training_state'])
+
+    else:
+        instance = SAKRA(config_json_path=args.config,
+                         verbose=args.verbose,
+                         suppress_train=args.suppress_train)

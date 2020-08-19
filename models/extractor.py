@@ -41,11 +41,15 @@ class Extractor(torch.nn.Module):
         signature_latent_compressors = torch.nn.ModuleDict()
         if self.signature_config is not None:
             for cur_signature in self.signature_config.keys():
-                total_latent_dim = total_latent_dim + self.signature_config[cur_signature]['signature_lat_dim']
-                signature_latent_compressors[cur_signature] = model.FCCompressor(input_dim=self.encoder_neurons,
-                                                                                 output_dim=
-                                                                                 self.signature_config[cur_signature][
-                                                                                     'signature_lat_dim'])
+                model_details = self.signature_config[cur_signature].get('model')
+                if model_details is None or model_details.get('attach') != 'True':
+                    # Create extra dimensions by default
+                    total_latent_dim = total_latent_dim + self.signature_config[cur_signature]['signature_lat_dim']
+                    signature_latent_compressors[cur_signature] = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                                                     output_dim=
+                                                                                     self.signature_config[cur_signature][
+                                                                                         'signature_lat_dim'])
+
         # Signature regressor
         signature_regressors = torch.nn.ModuleDict()
         if self.signature_config is not None:
@@ -60,8 +64,8 @@ class Extractor(torch.nn.Module):
                     if model_details['type'] == 'FCRegressor':
                         signature_regressors[cur_signature] = model.FCRegressor(
                             input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
-                            output_dim=self.signature_config[cur_signature]['siganture_out_dim'],
-                            hidden_neurons=self.signature_config[cur_signature].get('hidden_neurons', 5)
+                            output_dim=self.signature_config[cur_signature]['signature_out_dim'],
+                            hidden_neurons=model_details.get('hidden_neurons', 5)
                         )
                     elif model_details['type'] == 'LinRegressor':
                         signature_regressors[cur_signature] = model.LinRegressor(
@@ -77,10 +81,12 @@ class Extractor(torch.nn.Module):
         pheno_latent_compressors = torch.nn.ModuleDict()
         if self.pheno_config is not None:
             for cur_pheno in self.pheno_config.keys():
-                total_latent_dim = total_latent_dim + self.pheno_config[cur_pheno]['pheno_lat_dim']
-                pheno_latent_compressors[cur_pheno] = model.FCCompressor(input_dim=self.encoder_neurons,
-                                                                         output_dim=
-                                                                         self.pheno_config[cur_pheno]['pheno_lat_dim'])
+                model_details = self.pheno_config[cur_pheno].get('model')
+                if model_details is None or model_details.get('attach') != 'True':
+                    total_latent_dim = total_latent_dim + self.pheno_config[cur_pheno]['pheno_lat_dim']
+                    pheno_latent_compressors[cur_pheno] = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                                             output_dim=
+                                                                             self.pheno_config[cur_pheno]['pheno_lat_dim'])
 
         # Category classifier(/regressor)
         pheno_models = torch.nn.ModuleDict()
@@ -108,7 +114,7 @@ class Extractor(torch.nn.Module):
                         pheno_models[cur_pheno] = model.FCRegressor(
                             input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
                             output_dim=self.pheno_config[cur_pheno]['pheno_out_dim'],
-                            hidden_neurons=self.pheno_config[cur_pheno].get('hidden_neurons', 5)
+                            hidden_neurons=model_details.get('hidden_neurons', 5)
                         )
                     elif model_details['type'] == 'LinRegressor':
                         pheno_models[cur_pheno] = model.LinRegressor(
@@ -169,23 +175,35 @@ class Extractor(torch.nn.Module):
         # Forward signature supervision
         lat_signature = dict()
         signature_out = dict()
+        attached_signatures = list()
         if forward_reconstruction or forward_signature:
             if selected_signature is None:
                 # Select all signature
                 selected_signature = self.signature_config.keys()
             for cur_signature in selected_signature:
+                model_details = self.signature_config[cur_signature].get('model')
+                if model_details is not None:
+                    if model_details.get('attach') == 'True':
+                        attached_signatures.append(cur_signature)
+                        continue
                 lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](x)
                 lat_all = torch.cat((lat_all, lat_signature[cur_signature]), 1)
                 signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](
-                lat_signature[cur_signature])
+                    lat_signature[cur_signature])
 
         # Forward phenotype supervision
         lat_pheno = dict()
         pheno_out = dict()
+        attached_phenos = list()
         if forward_reconstruction or forward_pheno:
             if selected_pheno is None:
                 selected_pheno = self.pheno_config.keys()
             for cur_pheno in selected_pheno:
+                model_details = self.pheno_config[cur_pheno].get('model')
+                if model_details is not None:
+                    if model_details.get('attach') == 'True':
+                        attached_phenos.append(cur_pheno)
+                        continue
                 lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](x)
                 lat_all = torch.cat((lat_all, lat_pheno[cur_pheno]), 1)
                 pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
@@ -194,6 +212,41 @@ class Extractor(torch.nn.Module):
         re_x = None
         if forward_reconstruction:
             re_x = self.model['decoder'](lat_all)
+
+        # Process attached signature/pheno tasks
+        def handle_attach(model_details):
+            if model_details['attach_to'] == 'main_lat':
+                return lat_main
+            elif model_details['attach_to'] == 'signature_lat':
+                return lat_signature[model_details['attach_key']]
+            elif model_details['attach_to'] == 'pheno_lat':
+                return lat_pheno[model_details['attach_key']]
+            elif model_details['attach_to'] == 'all_lat':
+                return lat_all
+            elif model_details['attach_to'] == 'multiple':
+                lat_cur = torch.Tensor()
+                for cur_attach in model_details['attach_key']:
+                    if cur_attach['type'] == 'pheno':
+                        lat_cur = torch.cat((lat_cur, lat_pheno[cur_attach['key']]), 1)
+                    elif cur_attach['type'] == 'signature':
+                        lat_cur = torch.cat((lat_cur, lat_signature[cur_attach['key']]), 1)
+                    elif cur_attach['type'] == 'main':
+                        lat_cur = torch.cat((lat_cur, lat_main), 1)
+                return lat_cur
+
+        # Attached signatures
+        if forward_signature:
+            for cur_signature in attached_signatures:
+                model_details = self.signature_config[cur_signature].get('model')
+                lat_signature[cur_signature] = handle_attach(model_details)
+                signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](lat_signature[cur_signature])
+
+        # Attached phenos
+        if forward_pheno:
+            for cur_pheno in attached_phenos:
+                model_details = self.pheno_config[cur_pheno].get('model')
+                lat_pheno[cur_pheno] = handle_attach(model_details)
+                pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
 
         return {
             'x': batch,

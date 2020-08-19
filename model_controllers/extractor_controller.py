@@ -370,17 +370,19 @@ class ExtractorController(object):
         :return:
         """
         if mode == 'keys':
+            keys_to_ret = list()
             if selection is None or selection == '*':
                 # Select all in internal config
-                return internal.keys()
+                keys_to_ret = internal.keys()
             elif type(selection) is dict:
-                return selection.keys()
+                keys_to_ret = selection.keys()
             elif type(selection) is list:
-                return selection
+                keys_to_ret = selection
             elif type(selection) is str:
-                return [selection]
+                keys_to_ret = [selection]
             else:
                 raise ValueError
+            return keys_to_ret
         elif mode == 'dict':
             if selection is None or selection == '*':
                 return {idx: '*' for idx in internal.keys()}
@@ -411,27 +413,71 @@ class ExtractorController(object):
         :return:
         """
         # Forward model (obtain pre-loss-calculated tensors)
-        if forward_reconstruction:
-            # When reconstruction is on, all latents should be forwarded, though loss could be backwarded partially
-            fwd_res = self.model(batch['expr'][expr_key],
-                                 forward_main_latent=forward_main_latent,
-                                 forward_reconstruction=forward_reconstruction,
-                                 forward_signature=forward_signature,
-                                 selected_signature=self.select_item_dict(selection='*',
-                                                                          internal=self.signature_config),
-                                 forward_pheno=forward_pheno,
-                                 selected_pheno=self.select_item_dict(selection='*',
-                                                                      internal=self.pheno_config))
-        else:
-            fwd_res = self.model(batch['expr'][expr_key],
-                                 forward_main_latent=forward_main_latent,
-                                 forward_reconstruction=forward_reconstruction,
-                                 forward_signature=forward_signature,
-                                 selected_signature=self.select_item_dict(selection=selected_signature,
-                                                                          internal=self.signature_config),
-                                 forward_pheno=forward_pheno,
-                                 selected_pheno=self.select_item_dict(selection=selected_pheno,
-                                                                      internal=self.pheno_config))
+        signature_select_fwd = list()
+        if forward_signature:
+            signature_select_fwd = self.select_item_dict(selection=selected_signature, internal=self.signature_config)
+        pheno_select_fwd = list()
+        if forward_pheno:
+            pheno_select_fwd = self.select_item_dict(selection=selected_pheno, internal=self.pheno_config)
+        main_fwd = forward_main_latent
+        rec_fwd = forward_reconstruction
+        signature_attach_req_set = set(signature_select_fwd)
+        pheno_attach_req_set = set(pheno_select_fwd)
+        for cur_key in pheno_select_fwd:
+            model_details = self.pheno_config[cur_key].get('model')
+            if model_details is not None:
+                if model_details.get('attach') == 'True':
+                    if model_details['attach_to'] == 'signature_lat':
+                        signature_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'pheno_lat':
+                        pheno_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'main_lat':
+                        main_fwd = True
+                    elif model_details['attach_to'] == 'all_lat':
+                        rec_fwd = True
+                    elif model_details['attach_to'] == 'multiple':
+                        for cur_attach in model_details['attach_key']:
+                            if cur_attach['type'] == 'pheno':
+                                pheno_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'signature':
+                                signature_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'main':
+                                main_fwd = True
+        for cur_key in signature_select_fwd:
+            model_details = self.signature_config[cur_key].get('model')
+            if model_details is not None:
+                if model_details.get('attach') == 'True':
+                    if model_details['attach_to'] == 'signature_lat':
+                        signature_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'pheno_lat':
+                        pheno_attach_req_set.add(model_details['attach_key'])
+                    elif model_details['attach_to'] == 'main_lat':
+                        main_fwd = True
+                    elif model_details['attach_to'] == 'all_lat':
+                        rec_fwd = True
+                    elif model_details['attach_to'] == 'multiple':
+                        for cur_attach in model_details['attach_key']:
+                            if cur_attach['type'] == 'pheno':
+                                pheno_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'signature':
+                                signature_attach_req_set.add(cur_attach['key'])
+                            elif cur_attach['type'] == 'main':
+                                main_fwd = True
+        signature_select_fwd = list(signature_attach_req_set)
+        pheno_select_fwd = list(pheno_attach_req_set)
+        if rec_fwd:
+            signature_select_fwd = '*'
+            pheno_select_fwd = '*'
+        signature_select_fwd = self.select_item_dict(selection=signature_select_fwd, internal=self.signature_config)
+        pheno_select_fwd = self.select_item_dict(selection=pheno_select_fwd, internal=self.pheno_config)
+
+        fwd_res = self.model(batch['expr'][expr_key],
+                             forward_main_latent=main_fwd,
+                             forward_reconstruction=rec_fwd,
+                             forward_signature=forward_signature,
+                             selected_signature=signature_select_fwd,
+                             forward_pheno=forward_pheno,
+                             selected_pheno=pheno_select_fwd)
 
         # Reconstruction Loss
         main_loss = {'loss': dict(), 'regularization': dict()}
@@ -661,8 +707,67 @@ class ExtractorController(object):
 
         return loss
 
-    def save_checkpoint(self):
-        raise NotImplementedError
+    def save_checkpoint(self, save_config=False, save_model_arch=False):
+        ret_state_dict = dict()
 
-    def load_checkpoint(self):
-        raise NotImplementedError
+        ret_state_dict['type'] = 'extractor'
+
+        # Configs (redundant for checking)
+        if save_config:
+            ret_state_dict['config'] = self.config
+            ret_state_dict['main_latent_config'] = self.main_latent_config
+            ret_state_dict['pheno_config'] = self.pheno_config
+            ret_state_dict['signature_config'] = self.signature_config
+
+        # Epochs
+        ret_state_dict['cur_epoch'] = self.cur_epoch
+        ret_state_dict['cur_tick'] = self.cur_tick
+        ret_state_dict['main_epoch'] = self.main_epoch
+        ret_state_dict['pheno_epoch'] = self.pheno_epoch
+        ret_state_dict['signature_epoch'] = self.signature_epoch
+
+        # Loss weights
+        ret_state_dict['main_loss_weight'] = self.main_loss_weight
+        ret_state_dict['pheno_loss_weight'] = self.pheno_loss_weight
+        ret_state_dict['signature_loss_weight'] = self.signature_loss_weight
+
+        # Model state dict
+        ret_state_dict['model_state_dict'] = self.model.state_dict()
+
+        # Optimizer state dict
+        ret_state_dict['optimizer_state_dict'] = self.optimizer.state_dict()
+
+        # Model architecture
+        if save_model_arch:
+            ret_state_dict['model'] = self.model
+
+        return ret_state_dict
+
+    def load_checkpoint(self, state_dict: dict):
+        if type(state_dict) is not dict:
+            raise ValueError('A dict generated by Extractor controllor\'s save_checkpoint is expected.')
+        if state_dict.get('type') != 'extractor':
+            raise ValueError('Input state dict is not for Extractor.')
+
+        # Verbose logging
+        if self.verbose:
+            print("Controller to resume state:")
+            print(state_dict)
+
+        # Resume Epochs
+        self.cur_epoch = state_dict['cur_epoch']
+        self.cur_tick = state_dict['cur_tick']
+        self.main_epoch = state_dict['main_epoch']
+        self.pheno_epoch = state_dict['pheno_epoch']
+        self.signature_epoch = state_dict['signature_epoch']
+
+        # Resume loss weights
+        self.main_loss_weight = state_dict['main_loss_weight']
+        self.pheno_loss_weight = state_dict['pheno_loss_weight']
+        self.signature_loss_weight = state_dict['signature_loss_weight']
+
+        # Resume model state dict
+        self.model.load_state_dict(state_dict['model_state_dict'])
+
+        # Resume optimizer state dict
+        self.optimizer.load_state_dict(state_dict['optimizer_state_dict'])

@@ -100,25 +100,59 @@ try({
             scale_alpha_manual(limits = c(TRUE, FALSE), values = c(1, 0.3)) +
             scale_color_brewer(palette = 'Paired') +
             theme_classic() +
-            theme(legend.position = 'bottom')
-          plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
-          plt_path <- './runs/EX08_07/plots/data_key_distrib'
-          system(paste0('mkdir -p ', plt_path))
-          plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_data_key.jpg')
-          ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
+              theme(legend.position = 'bottom')
+            plt <- ggMarginal(plt, groupColour = TRUE, groupFill = TRUE)
+            plt_path <- './runs/EX08_07/plots/data_key_distrib'
+            system(paste0('mkdir -p ', plt_path))
+            plt_filename <- paste0(plt_path, '/', i, '_', cur_key, '_data_key.jpg')
+            ggsave(plt, filename = plt_filename, width = output_width, height = output_height)
         }
       }
     })
 ```
+
+### SingleR annotation
+
+```{r}
+try({
+        keys_to_plot <- c("protein_v3_overall_train_all_latent")
+        output_width <- 15
+        output_height <- 15
+
+        annot_df_path <- './dataset/10X_PBMC_V1_V3_V31_integrated/annot_df_all.csv'
+        annot_df <- read.csv(annot_df_path) %>% select(-X)
+
+        for (i in c(221, 230)) {
+            for (key_idx in 1:length(keys_to_plot)) {
+                cur_key <- keys_to_plot[key_idx]
+                emb_filename <- paste0(emb_path, '/', i, '_', cur_key, '.csv')
+                cur_emb <- read.csv(emb_filename) %>%
+                    left_join(y = pheno_df, by = 'cell') %>%
+                    left_join(y = annot_df, by = 'cell')
+                molten_emb <- cur_emb %>%
+                    melt(id.vars = c("cell", "main.1", "main.2", "data_key.1", "data_key.2", "protein_markers.1", "protein_markers.2", "data_key", "SingleR_immuneDB_main", "SingleR_immuneDB_fine", "SingleR_monaco_main", "SingleR_monaco_fine"))
+
+                plt <- ggplot() +
+                    theme_classic() +
+                    geom_point(data = molten_emb, aes(x = data_key.1, y = data_key.2, alpha = 2^value, color = SingleR_monaco_main)) +
+                    scale_alpha_continuous(range = c(0, 1)) +
+                    # scale_color_brewer(palette = "Paired") +
+                    facet_wrap(vars(variable))
+            }
+        }
+
+    })
+```
+
 ## Protein marker
 
 ### Cell distribution in latent
 ```{r signature distrib}
 try({
-      keys_to_plot <- c("merged_overall_train_all_latent")
-      #keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
-      #                  "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
-      #                  "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
+        keys_to_plot <- c("merged_overall_train_all_latent")
+        #keys_to_plot <- c("merged_overall_train_all_latent", "merged_overall_test_all_latent",
+        #                  "pure_v1_overall_train_all_latent", "pure_v1_overall_test_all_latent",
+        #                  "protein_v3_overall_train_all_latent", "protein_v3_overall_test_all_latent")
       output_width <- 15
       output_height <- 15
       #for (i in c(seq(1, total_epochs, 9), total_epochs)) {

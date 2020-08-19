@@ -1,4 +1,50 @@
 {
+  "source": {
+    "pheno_df_key": "source",
+    "type": "categorical",
+    "order": [
+      "v1_purified",
+      "V3_with_protein_barcode",
+      "V31_targeted_immune_panel"
+    ],
+    "pheno_lat_dim": 1,
+    "pheno_out_dim": 3,
+    "model": {
+      "type": "LinClassifier"
+    },
+    "loss": {
+      "NLL": {
+        "type": "NLL",
+        "init_weight": 1.0,
+        "progressive_start_epoch": 100,
+        "progressive_const": 1.0
+      }
+    },
+    "pre_procedure": [],
+    "post_procedure": [
+      {
+        "type": "ToOrdinal"
+      },
+      {
+        "type": "ToTensor"
+      }
+    ],
+    "split": {
+      "type": "none"
+    },
+    "regularization": {
+      "shape_uniform_unsupervised": {
+        "type": "SW2_uniform",
+        "SW2_num_projections": 50,
+        "uniform_low": -10,
+        "uniform_high": 10,
+        "progressive_const": 1.05,
+        "progressive_start_epoch": 1,
+        "init_weight": 0.1,
+        "max_weight": 1.0
+      }
+    }
+  },
   "data_key": {
     "pheno_df_key": "data_key",
     "type": "categorical",
@@ -13,10 +59,11 @@
       "CD56+_Natural_Killer_Cells",
       "CD8+_CD45RA+_Naive_Cytotoxic_T_Cells",
       "CD8+_Cytotoxic_T_cells",
-      "V3_with_protein_barcode"
+      "V3_with_protein_barcode",
+      "V31_targeted_immune_panel"
     ],
     "pheno_lat_dim": 2,
-    "pheno_out_dim": 11,
+    "pheno_out_dim": 12,
     "model": {
       "type": "LinClassifier"
     },
