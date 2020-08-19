@@ -75,6 +75,18 @@
       <excludeFolder url="file://$MODULE_DIR$/runs/EX10_02/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX10_02/plots" />
       <excludeFolder url="file://$MODULE_DIR$/runs/EX11_01/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX11_02/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX11_02/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX11_03/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX11_03/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX11_04/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/EX11_04/plots" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/FT02_01/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/FT02_02/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/FT02_03/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/FT02_04/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/FT02_05/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/FT02_06/logs" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
     <orderEntry type="inheritedJdk" />
