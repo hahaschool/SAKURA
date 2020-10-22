@@ -233,6 +233,8 @@ class Extractor(torch.nn.Module):
                     elif cur_attach['type'] == 'main':
                         lat_cur = torch.cat((lat_cur, lat_main), 1)
                 return lat_cur
+            else:
+                raise NotImplementedError("Unsupported type of attach.")
 
         # Attached signatures
         if forward_signature:

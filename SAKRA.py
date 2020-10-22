@@ -45,6 +45,10 @@ class SAKRA(object):
         # Device
         self.device = self.config['device']
 
+        # Persistant test set optimization
+        self.persist_test_set = (self.config.get('persist_test_set') == 'True')
+        self.persisted_batches = dict()
+
         # Reproducibility
         if self.config['reproducible'] == 'True':
             self.rnd_seed = int(self.config['rnd_seed'])
@@ -67,7 +71,7 @@ class SAKRA(object):
         self.generate_splits()
 
         # Get actual gene count (input dimension)
-        input_genes = self.count_data[0]['expr']['all'].shape[1]
+        input_genes = self.count_data.gene_expr_mat.shape[0]
 
         # Setup model
         self.model = Extractor(input_dim=input_genes,
@@ -574,11 +578,20 @@ class SAKRA(object):
              test_pheno=True, selected_pheno=None,
              test_signature=True, selected_signature=None,
              make_logs=False, dump_latent=True, log_prefix='test', latent_prefix=''):
-        # Split mask
+
         selected_split_mask = self.splits[split_id]
 
+        # Persistant test set optimization
+        cur_batch = self.persisted_batches.get(split_id)
+
+        if cur_batch is None:
+            # Split mask
+            cur_batch = self.count_data[selected_split_mask]
+            if self.persist_test_set:
+                self.persisted_batches[split_id] = cur_batch
+
         # Eval on split
-        controller_ret = self.controller.eval(self.count_data[selected_split_mask],
+        controller_ret = self.controller.eval(cur_batch,
                                               forward_signature=test_signature,
                                               selected_signature=selected_signature,
                                               forward_pheno=test_pheno, selected_pheno=selected_pheno,

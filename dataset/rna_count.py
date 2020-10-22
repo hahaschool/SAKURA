@@ -272,7 +272,8 @@ class SCRNASeqCountData(Dataset):
                     for cur_procedure in cur_pheno_meta['post_procedure']:
                         if cur_procedure['type'] == 'ToTensor':
                             ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
-                                                                            input_type='pheno')
+                                                                            input_type='pheno',
+                                                                            force_tensor_type=cur_procedure.get('force_tensor_type'))
                         elif cur_procedure['type'] == 'ToOnehot':
                             ret['pheno'][pheno_output_key] = self.to_onehot(sample=ret['pheno'][pheno_output_key],
                                                                             order=cur_pheno_meta['order'])
@@ -287,12 +288,13 @@ class SCRNASeqCountData(Dataset):
                         else:
                             raise NotImplementedError('Unsupported transformation type for phenotype groups')
                 elif cur_pheno_meta['type'] == 'numerical':
-                    ret['pheno'][pheno_output_key] = self.pheno_df.loc[:, [cur_pheno_meta['pheno_df_keys']]].iloc[item, :].copy()
+                    ret['pheno'][pheno_output_key] = self.pheno_df.loc[:, cur_pheno_meta['pheno_df_keys']].iloc[item, :].copy()
                     # Process phenotype label as required
                     for cur_procedure in cur_pheno_meta['post_procedure']:
                         if cur_procedure['type'] == 'ToTensor':
                             ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
-                                                                            input_type='pheno')
+                                                                            input_type='pheno',
+                                                                            force_tensor_type=cur_procedure.get('force_tensor_type'))
                         else:
                             raise NotImplementedError('Unsupported transformation type for phenotype groups')
                 else:

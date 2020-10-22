@@ -1,8 +1,9 @@
-import numpy as np
+from math import sqrt, sin, cos
 
+import numpy as np
 import torch
 from sklearn.datasets import make_circles
-from math import sqrt,sin,cos
+
 
 def swiss_roll(batch_size, n_dim=2, n_labels=10, label_indices=None):
     if n_dim != 2:
@@ -66,7 +67,7 @@ def rand_cirlce2d(batch_size):
     return torch.from_numpy(z).type(torch.FloatTensor)
 
 
-def rand_ring2d(batch_size):
+def rand_ring2d(batch_size, n_dim=2):
     """ This function generates 2D samples from a hollowed-cirlce distribution in a 2-dimensional space.
 
         Args:
@@ -75,6 +76,9 @@ def rand_ring2d(batch_size):
         Return:
             torch.Tensor: tensor of size (batch_size, 2)
     """
+    if n_dim != 2:
+        raise NotImplementedError
+
     circles = make_circles(2 * batch_size, noise=.01)
     z = np.squeeze(circles[0][np.argwhere(circles[1] == 0), :])
     return torch.from_numpy(z).type(torch.FloatTensor)

@@ -346,6 +346,13 @@ class ExtractorController(object):
                 num_projections=regularization_config['SW2_num_projections'],
                 device=self.device
             )
+        elif regularization_config['type'] == 'SW2_ring2d':
+            return self.SW2(
+                encoded_samples=tensor,
+                distribution_fn=functools.partial(distributions.rand_ring2d),
+                num_projections=regularization_config['SW2_num_projections'],
+                device=self.device
+            )
         elif regularization_config['type'] == 'SW2_gaussian_mixturn_supervised':
             # TODO: Supervised gaussian mixture prior
             raise NotImplementedError
@@ -474,9 +481,9 @@ class ExtractorController(object):
         fwd_res = self.model(batch['expr'][expr_key],
                              forward_main_latent=main_fwd,
                              forward_reconstruction=rec_fwd,
-                             forward_signature=forward_signature,
+                             forward_signature=len(signature_select_fwd) > 0,
                              selected_signature=signature_select_fwd,
-                             forward_pheno=forward_pheno,
+                             forward_pheno=len(pheno_select_fwd) > 0,
                              selected_pheno=pheno_select_fwd)
 
         # Reconstruction Loss
@@ -514,19 +521,22 @@ class ExtractorController(object):
                 selected_pheno = {idx: {'loss': '*', 'regularization': '*'} for idx in self.pheno_config.keys()}
             for cur_pheno in selected_pheno.keys():
                 pheno_loss[cur_pheno] = {'loss': dict(), 'regularization': dict()}
-                pheno_ans = batch['pheno'][cur_pheno].squeeze()
+
                 # Phenotype loss
                 selected_pheno_loss_keys = self.select_loss_dict(selection=selected_pheno[cur_pheno]['loss'],
                                                                  internal=self.pheno_config[cur_pheno]['loss'])
                 for cur_pheno_loss_key in selected_pheno_loss_keys:
                     cur_pheno_loss = self.pheno_config[cur_pheno]['loss'][cur_pheno_loss_key]
                     if cur_pheno_loss['type'] == 'NLL':
+                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0])
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
                             torch.nn.functional.nll_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
                     elif cur_pheno_loss['type'] == 'MSE' or cur_pheno_loss['type'] == 'L2':
+                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0], -1)
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
                             torch.nn.functional.mse_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
                     elif cur_pheno_loss['type'] == 'L1':
+                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0], -1)
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
                             torch.nn.functional.l1_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
                     else:
