@@ -77,9 +77,8 @@ class SAKRA(object):
         self.model = Extractor(input_dim=input_genes,
                                signature_config=self.signature_config,
                                pheno_config=self.count_data.pheno_meta,
-                               encoder_neurons=self.config['main_latent']['encoder_neurons'],
-                               decoder_neurons=self.config['main_latent']['decoder_neurons'],
-                               main_latent_dim=self.config['main_latent']['latent_dim'],
+                               main_lat_config=self.config['main_latent'],
+                               pre_encoder_config=self.config.get('pre_encoder_config'),
                                verbose=self.verbose)
         # Setup trainer
         self.controller = ExtractorController(model=self.model,
@@ -128,11 +127,15 @@ class SAKRA(object):
             self.pheno_csv_path = self.config['dataset'].get('pheno_csv_path')
             self.pheno_meta_path = self.config['dataset'].get('pheno_meta_path')
             self.signature_config_path = self.config['dataset'].get('signature_config_path')
+            self.pheno_df_dtype = self.config['dataset'].get('pheno_df_dtype')
+            self.pheno_df_na_filter = self.config['dataset'].get('pheno_df_na_filter') == 'True'
 
             self.count_data = rna_count_sparse.SCRNASeqCountDataSparse(gene_MM_path=self.gene_expr_MM_path,
                                                                        gene_name_csv_path=self.gene_name_csv_path,
                                                                        cell_name_csv_path=self.cell_name_csv_path,
                                                                        pheno_csv_path=self.pheno_csv_path,
+                                                                       pheno_df_dtype=self.pheno_df_dtype,
+                                                                       pheno_df_na_filter=self.pheno_df_na_filter,
                                                                        pheno_meta_json_path=self.pheno_meta_path,
                                                                        mode='all',
                                                                        verbose=self.verbose)
@@ -377,7 +380,8 @@ class SAKRA(object):
               make_logs=True, dump_latent=True, log_prefix='train', latent_prefix='',
               test_every_epoch=False, test_on_segment=False, test_segment=2000, tests=None,
               checkpoint_on_segment=False, checkpoint_segment=2000, checkpoint_prefix='', checkpoint_save_arch=False,
-              resume=False, resume_dict=None):
+              resume=False, resume_dict=None,
+              detach=False, detach_from=''):
         """
         Batch train model for at least one epoch.
         :param split_id: (str) id of the split to be used in this train
@@ -487,7 +491,8 @@ class SAKRA(object):
                                                        backward_main_latent_regularization=train_main,
                                                        backward_pheno_loss=train_pheno, selected_pheno=selected_pheno,
                                                        backward_signature_loss=train_signature,
-                                                       selected_signature=selected_signature)
+                                                       selected_signature=selected_signature,
+                                                       detach=detach, detach_from=detach_from)
 
                 # Verbose logging
                 if self.verbose:
@@ -577,7 +582,8 @@ class SAKRA(object):
              test_main=True,
              test_pheno=True, selected_pheno=None,
              test_signature=True, selected_signature=None,
-             make_logs=False, dump_latent=True, log_prefix='test', latent_prefix=''):
+             make_logs=False, dump_latent=True, log_prefix='test', latent_prefix='',
+             dump_pre_encoder_output=False, dump_reconstructed_output=False):
 
         selected_split_mask = self.splits[split_id]
 
@@ -614,6 +620,8 @@ class SAKRA(object):
                                            path=self.log_path + '/' + str(
                                                self.controller.cur_epoch) + '_' + latent_prefix + '.csv')
 
+        # TODO: Dump reconstructed gene expressions and pre-encoder outputs
+
     def train_hybrid(self, split_configs: dict, ticks=50000,
                      hybrid_mode='interleave',
                      prog_loss_weight_mode='epoch_end',
@@ -623,6 +631,9 @@ class SAKRA(object):
                      loss_prog_on_test: dict = None,
                      resume=False, resume_dict=None):
         """
+        Train model in hydrid mode
+
+        Note: when epoch loss progressing is on, then the progression will incur only for selected loss when an epoch ends (tick reach end)
 
         :param split_configs:
         :param ticks:
@@ -754,7 +765,9 @@ class SAKRA(object):
                                                        backward_pheno_loss=(split_configs[cur_split_key]['train_pheno'] == 'True'),
                                                        selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
                                                        backward_signature_loss=(split_configs[cur_split_key]['train_signature'] == 'True'),
-                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'))
+                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'),
+                                                       detach=(split_configs[cur_split_key].get('detach') == 'True'),
+                                                       detach_from=split_configs[cur_split_key].get('detach_from', ''))
 
                 # Log
                 if make_logs:
@@ -863,7 +876,9 @@ class SAKRA(object):
                                                                       selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
                                                                       backward_signature_loss=(split_configs[cur_split_key]['train_signature'] == 'True'),
                                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'),
-                                                                      suppress_backward=True)
+                                                                      suppress_backward=True,
+                                                                      detach=(split_configs[cur_split_key].get('detach') == 'True'),
+                                                                      detach_from=split_configs[cur_split_key].get('detach_from', ''))
                     total_loss += cur_losses[cur_split_key]['total_loss_backwarded']
                     # Log
                     if make_logs:
@@ -987,7 +1002,9 @@ class SAKRA(object):
                            checkpoint_segment=(cur_story_item.get('checkpoint_segment', 2000)),
                            checkpoint_prefix=(cur_story_item.get('checkpoint_prefix')),
                            checkpoint_save_arch=(cur_story_item.get('checkpoint_save_arch') == 'True'),
-                           resume=resume, resume_dict=resume_dict)
+                           resume=resume, resume_dict=resume_dict,
+                           detach=(cur_story_item.get('detach') == 'True'),
+                           detach_from=cur_story_item.get('detach_from', ''))
 
                 # Handle resume completion
                 if resume:

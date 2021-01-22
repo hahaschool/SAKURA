@@ -5,18 +5,18 @@ def modulebuilder(cfg):
     ret = list() #nn.ModuleList()
     cur_dim=cfg['in_dim']
     for cur_module in cfg:
-        if cur_module['type'] is 'Linear':
+        if cur_module['type'] == 'Linear':
             ret.append(nn.Linear(in_features=cur_module['in_dim'], out_features=cur_module['out_dim']))
-            cur_dim=cur_module['out_dim']
-        elif cur_module['type'] is 'Dropout':
+            cur_dim = cur_module['out_dim']
+        elif cur_module['type'] == 'Dropout':
             ret.append(nn.Dropout(p=cur_module.get('p')))
-        elif cur_module['type'] is 'ReLU':
+        elif cur_module['type'] == 'ReLU':
             ret.append(nn.ReLU())
-        elif cur_module['type'] is 'CELU':
+        elif cur_module['type'] == 'CELU':
             ret.append(nn.CELU())
-        elif cur_module['type'] is 'Softmax':
+        elif cur_module['type'] == 'Softmax':
             ret.append(nn.Softmax())
-        elif cur_module['type'] is 'LogSoftmax':
+        elif cur_module['type'] == 'LogSoftmax':
             ret.append(nn.LogSoftmax)
 
     return ret
@@ -27,18 +27,32 @@ def modulebuilder(cfg):
 
 
 class FCDecoder(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_neurons=50, config=None):
+    def __init__(self, input_dim, output_dim, hidden_neurons=50, hidden_layers=3, config=None):
         super(FCDecoder, self).__init__()
-        self.model_list=nn.ModuleList()
-        if config is None:
-            # Default 2 hidden layer structure
+        self.model_list = nn.ModuleList()
+        self.config = config
+        if self.config is None:
+            # Default 3 hidden layer structure
             # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> Output
-            self.hidden_neurons=hidden_neurons
-            self.model_list.append(nn.Linear(in_features=input_dim, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=output_dim))
+            # The difference btw FCPreEncoder/FCCompressor is default layers and no CELU activations
+            self.input_dim = input_dim
+            self.output_dim = output_dim
+            self.hidden_neurons = hidden_neurons
+            self.hidden_layers = hidden_layers
+            if self.hidden_layers == 1:
+                # Default is 1 layer structure
+                # Input --> Output (latent transformation)
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+            elif self.hidden_layers > 1:
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
+
+                # If more than 2 layers requested
+                for i in range(self.hidden_layers - 2):
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                    self.model_list.append(nn.CELU())
+
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
 
         else:
             self.model_list=modulebuilder(config)
@@ -50,20 +64,36 @@ class FCDecoder(nn.Module):
 
 class FCPreEncoder(nn.Module):
     # Input --> Linear --> CELU --> Linear --> CELU --> Output
-    def __init__(self, input_dim, output_dim, hidden_neurons=50, config=None):
+    def __init__(self, input_dim: int, output_dim: int, hidden_neurons: int = 50, hidden_layers: int = 2, config=None):
         super(FCPreEncoder, self).__init__()
-        self.input_dim=input_dim
-        self.output_dim=output_dim
-        self.config=config
-        self.model_list=nn.ModuleList()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.config = config
+        self.model_list = nn.ModuleList()
         if config is None:
             # Default 2 hidden layer structure
             # Input --> Linear --> CELU --> Linear --> CELU --> Output (Low-dim compressor expected)
             self.hidden_neurons = hidden_neurons
-            self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
-            self.model_list.append(nn.CELU())
+            self.hidden_layers = hidden_layers
+
+            if self.hidden_layers == 1:
+                # Default is 1 layer structure
+                # Input --> Output (latent transformation)
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+                self.model_list.append(nn.CELU())
+            elif self.hidden_layers > 1:
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
+
+                # If more than 2 layers requested
+                for i in range(self.hidden_layers - 2):
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                    self.model_list.append(nn.CELU())
+
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                self.model_list.append(nn.CELU())
+            else:
+                raise ValueError("The number of hidden layer of FCCompressor should be 1, or larger than 1")
         else:
             self.model_list = modulebuilder(self.config)
     def forward(self, x):
@@ -75,20 +105,35 @@ class FCCompressor(nn.Module):
     """
     Simply used to compress outputs from pre-encoder to a lower dimension
     """
-    def __init__(self, input_dim, output_dim, config = None):
+
+    def __init__(self, input_dim: int, output_dim: int, hidden_neurons: int = 50, hidden_layers: int = 1, config=None):
         super(FCCompressor, self).__init__()
-        self.input_dim=input_dim
-        self.output_dim=output_dim
-        self.config=config
-        self.model_list=nn.ModuleList()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.config = config
+        self.model_list = nn.ModuleList()
         if self.config is None:
-            # Default 1 layer structure
-            # Input --> Linear --> Output (latent representation)
-            self.hidden_neurons=50
-            self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+            self.hidden_neurons = hidden_neurons
+            self.hidden_layers = hidden_layers
+
+            if self.hidden_layers == 1:
+                # Default is 1 layer structure
+                # Input --> Output (latent transformation)
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+            elif self.hidden_layers > 1:
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
+
+                # If more than 2 layers requested
+                for i in range(self.hidden_layers - 2):
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                    self.model_list.append(nn.CELU())
+
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+            else:
+                raise ValueError("The number of hidden layer of FCCompressor should be 1, or larger than 1")
         else:
             self.model_list=modulebuilder(self.config)
-        self.model=nn.Sequential(self.model_list)
 
     def forward(self, x):
         for cur_model in self.model_list:

@@ -47,7 +47,7 @@ class ToOnehot(object):
 
     def __call__(self, sample, order='auto'):
         # Adaptations
-        if order is not 'auto':
+        if order != 'auto':
             if type(order) is list:
                 order = [order]
 
@@ -62,13 +62,13 @@ class ToOrdinal(object):
     Useful for losses like torch.nn.CrossEntropyLoss
     """
 
-    def __call__(self, sample, order='auto'):
+    def __call__(self, sample, order='auto', handle_unknown='use_encoded_value', unknown_value=None):
         # Adaptations
-        if order is not 'auto':
+        if order != 'auto':
             if type(order) is list:
                 order = [order]
 
-        ortrs = skprep.OrdinalEncoder(categories=order, dtype=np.int).fit(sample)
+        ortrs = skprep.OrdinalEncoder(categories=order, handle_unknown=handle_unknown, unknown_value=unknown_value, dtype=np.int).fit(sample)
         return ortrs.transform(sample)
 
 

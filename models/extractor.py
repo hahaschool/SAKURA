@@ -11,30 +11,49 @@ class Extractor(torch.nn.Module):
     """
 
     def __init__(self,
-                 input_dim : int,
-                 signature_config=None, pheno_config=None,
-                 encoder_neurons=50, decoder_neurons=50, main_latent_dim=2,
-                 verbose=False):
+                 input_dim: int,
+                 signature_config=None, pheno_config=None, main_lat_config=None,
+                 pre_encoder_config=None, verbose=False):
         super(Extractor, self).__init__()
 
         # Verbose logging for debugging
         self.verbose = verbose
 
         self.input_dim = input_dim
-        self.encoder_neurons = encoder_neurons
-        self.decoder_neurons = decoder_neurons
-        self.main_latent_dim = main_latent_dim
+        self.main_lat_config = main_lat_config
+
+        # Legacy model structure parameters (back compatibility)
+        self.encoder_neurons = self.main_lat_config.get('encoder_neurons')  # Actually the dimension of pre-encoder outputs
+        self.decoder_neurons = self.main_lat_config.get('decoder_neurons')
+        self.main_latent_dim = self.main_lat_config.get('latent_dim')
+
         self.signature_config = signature_config
         self.pheno_config = pheno_config
+        self.pre_encoder_config = pre_encoder_config
 
         # Pre-encoder
-        pre_encoder = model.FCPreEncoder(input_dim=self.input_dim,
-                                         output_dim=self.encoder_neurons,
-                                         hidden_neurons=self.encoder_neurons)
-
+        # Back compatibility: if there is no pre-encoder config, use default pre-encoder arch (in --> h --> h)
+        if self.pre_encoder_config is None:
+            pre_encoder = model.FCPreEncoder(input_dim=self.input_dim,
+                                             output_dim=self.encoder_neurons,
+                                             hidden_neurons=self.encoder_neurons)
+        else:
+            # When pre-encoder is customized, self.encoder_neurons should be overriden by the output of pre-encoder
+            self.encoder_neurons = self.pre_encoder_config.get('pre_encoder_out_dim', self.encoder_neurons)
+            pre_encoder = model.FCPreEncoder(input_dim=self.input_dim,
+                                             output_dim=self.encoder_neurons,
+                                             hidden_neurons=self.pre_encoder_config.get('hidden_neurons'),
+                                             hidden_layers=self.pre_encoder_config.get('hidden_layers'))
         # Main Latent Compressor
-        main_latent_compressor = model.FCCompressor(input_dim=self.encoder_neurons,
-                                                    output_dim=self.main_latent_dim)
+        if main_lat_config.get('encoder_config') is None:
+            # Back compatibility (legacy mode)
+            main_latent_compressor = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                        output_dim=self.main_latent_dim)
+        else:
+            main_latent_compressor = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                        output_dim=self.main_latent_dim,
+                                                        hidden_neurons=main_lat_config['encoder_config'].get('hidden_neurons'),
+                                                        hidden_layers=main_lat_config['encoder_config'].get('hidden_layers'))
 
         # Signature Latent Compressor
         total_latent_dim = self.main_latent_dim
@@ -45,10 +64,17 @@ class Extractor(torch.nn.Module):
                 if model_details is None or model_details.get('attach') != 'True':
                     # Create extra dimensions by default
                     total_latent_dim = total_latent_dim + self.signature_config[cur_signature]['signature_lat_dim']
-                    signature_latent_compressors[cur_signature] = model.FCCompressor(input_dim=self.encoder_neurons,
-                                                                                     output_dim=
-                                                                                     self.signature_config[cur_signature][
-                                                                                         'signature_lat_dim'])
+
+                    encoder_config = self.signature_config[cur_signature].get('encoder_config')
+                    if encoder_config is None:
+                        # Default: a linear compressor
+                        signature_latent_compressors[cur_signature] = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                                                         output_dim=self.signature_config[cur_signature]['signature_lat_dim'])
+                    else:
+                        signature_latent_compressors[cur_signature] = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                                                         output_dim=self.signature_config[cur_signature]['signature_lat_dim'],
+                                                                                         hidden_neurons=encoder_config.get('hidden_neurons'),
+                                                                                         hidden_layers=encoder_config.get('hidden_layers'))
 
         # Signature regressor
         signature_regressors = torch.nn.ModuleDict()
@@ -84,9 +110,17 @@ class Extractor(torch.nn.Module):
                 model_details = self.pheno_config[cur_pheno].get('model')
                 if model_details is None or model_details.get('attach') != 'True':
                     total_latent_dim = total_latent_dim + self.pheno_config[cur_pheno]['pheno_lat_dim']
-                    pheno_latent_compressors[cur_pheno] = model.FCCompressor(input_dim=self.encoder_neurons,
-                                                                             output_dim=
-                                                                             self.pheno_config[cur_pheno]['pheno_lat_dim'])
+
+                    encoder_config = self.pheno_config[cur_pheno].get('encoder_config')
+                    if encoder_config is None:
+                        # Default: linear compressor
+                        pheno_latent_compressors[cur_pheno] = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                                                 output_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'])
+                    else:
+                        pheno_latent_compressors[cur_pheno] = model.FCCompressor(input_dim=self.encoder_neurons,
+                                                                                 output_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
+                                                                                 hidden_neurons=encoder_config.get('hidden_neurons'),
+                                                                                 hidden_layers=encoder_config.get('hidden_layers'))
 
         # Category classifier(/regressor)
         pheno_models = torch.nn.ModuleDict()
@@ -149,10 +183,11 @@ class Extractor(torch.nn.Module):
     def forward(self, batch,
                 forward_signature=True, selected_signature=None,
                 forward_pheno=True, selected_pheno=None,
-                forward_main_latent=True, forward_reconstruction=True):
+                forward_main_latent=True, forward_reconstruction=True,
+                detach=False, detach_from=''):
         """
         Forward extractor framework.
-
+        GRL- and GNL-related computations are done in the ExtractorController
         :param batch: (torch.Tensor) gene expression tensors, shape should be (N,M), where N is number of cell, M is number of gene
         :param forward_signature: (bool) should signature supervision part be forwarded
         :param selected_signature: (list or None) list of selected signatures to be forwarded, None to forward all signatures
@@ -160,16 +195,30 @@ class Extractor(torch.nn.Module):
         :param selected_pheno: (list or None) list of selected phenotypes to be forwarded, None to forward all phenotypes
         :param forward_main_latent: (bool) should main latent part be forwarded
         :param forward_reconstruction: (bool) should decoder be forwarded (decoder could be forwarded only when all latent dimensions are forwarded)
+
+        :param detach_grad: (bool) should the gradient be blocked from the midway of the network
+        :param detach_grad_from: (bool) from which the gradient should be blocked: pre_encoder (lat_pre will be detached, pre_encoder will not be trained),
+         encoder (main_lat, pheno_lat, signature_lat will be detached, neither pre-encoder nor encoder will be trained)
+
         :return: a dictionary containing results of forwarding
         """
         # Forward Pre Encoder
-        x = self.model['pre_encoder'](batch)
+        lat_pre = self.model['pre_encoder'](batch)
+
+        # Handle detach from pre_encoder
+        if detach and detach_from == 'pre_encoder':
+            lat_pre = lat_pre.detach()
 
         # Forward Main Latent
         lat_main = torch.Tensor()
         lat_all = torch.Tensor()
         if forward_main_latent:
-            lat_main = self.model['main_latent_compressor'](x)
+            lat_main = self.model['main_latent_compressor'](lat_pre)
+
+            # Handle detach from encoder
+            if detach and detach_from == 'encoder':
+                lat_main = lat_main.detach()
+
             lat_all = lat_main
 
         # Forward signature supervision
@@ -182,11 +231,19 @@ class Extractor(torch.nn.Module):
                 selected_signature = self.signature_config.keys()
             for cur_signature in selected_signature:
                 model_details = self.signature_config[cur_signature].get('model')
+
+                # Check if current signature requires handling of attachments
                 if model_details is not None:
                     if model_details.get('attach') == 'True':
                         attached_signatures.append(cur_signature)
                         continue
-                lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](x)
+
+                lat_signature[cur_signature] = self.model['signature_latent_compressors'][cur_signature](lat_pre)
+
+                # Handle detach from encoder
+                if detach and detach_from == 'encoder':
+                    lat_signature[cur_signature] = lat_signature[cur_signature].detach()
+
                 lat_all = torch.cat((lat_all, lat_signature[cur_signature]), 1)
                 signature_out[cur_signature] = self.model['signature_regressors'][cur_signature](
                     lat_signature[cur_signature])
@@ -204,7 +261,12 @@ class Extractor(torch.nn.Module):
                     if model_details.get('attach') == 'True':
                         attached_phenos.append(cur_pheno)
                         continue
-                lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](x)
+                lat_pheno[cur_pheno] = self.model['pheno_latent_compressors'][cur_pheno](lat_pre)
+
+                # Handle detach from encoder
+                if detach and detach_from == 'encoder':
+                    lat_pheno[cur_pheno] = lat_pheno[cur_pheno].detach()
+
                 lat_all = torch.cat((lat_all, lat_pheno[cur_pheno]), 1)
                 pheno_out[cur_pheno] = self.model['pheno_models'][cur_pheno](lat_pheno[cur_pheno])
 
@@ -252,6 +314,7 @@ class Extractor(torch.nn.Module):
 
         return {
             'x': batch,
+            'lat_pre': lat_pre,
             'lat_main': lat_main,
             'lat_signature': lat_signature,
             'signature_out': signature_out,
@@ -260,7 +323,3 @@ class Extractor(torch.nn.Module):
             're_x': re_x,
             'lat_all': lat_all
         }
-
-
-
-

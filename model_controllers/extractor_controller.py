@@ -6,6 +6,8 @@ from tabulate import tabulate
 
 import utils.distributions as distributions
 from models.extractor import Extractor
+from utils.gradient_reverse import NeutralizeLayerF
+from utils.gradient_reverse import ReverseLayerF
 from utils.sliced_wasserstein import SlicedWasserstein
 
 
@@ -77,7 +79,7 @@ class ExtractorController(object):
 
         # Move model to assigned device
         # TODO: GPU support of Extractor controller
-        if self.device is 'cuda':
+        if self.device == 'cuda':
             self.model.cuda()
 
         # Setup Optimizer
@@ -117,7 +119,7 @@ class ExtractorController(object):
                     projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key] = [
                         self.signature_config[cur_signature][cur_group][cur_signature_loss_key]['init_weight']]
 
-        # Weight inflation
+        # Dynamic weights
         for cur_epoch in range(1, expected_epoch):
             for cur_group in ['loss', 'regularization']:
                 for cur_main_loss_key in self.main_latent_config[cur_group].keys():
@@ -131,6 +133,9 @@ class ExtractorController(object):
                     if self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight') is not None:
                         projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch] = min(projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch],
                                                                                                           self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight'))
+                    if self.main_latent_config[cur_group][cur_main_loss_key].get('min_weight') is not None:
+                        projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch] = max(projected_weights['main_' + cur_group + '_' + cur_main_loss_key][cur_epoch],
+                                                                                                          self.main_latent_config[cur_group][cur_main_loss_key].get('min_weight'))
             for cur_pheno in self.pheno_config.keys():
                 for cur_group in ['loss', 'regularization']:
                     for cur_pheno_loss_key in self.pheno_config[cur_pheno][cur_group].keys():
@@ -147,6 +152,11 @@ class ExtractorController(object):
                             projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][cur_epoch] = min(
                                 projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][cur_epoch],
                                 self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight'))
+                        if self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('min_weight') is not None:
+                            projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][cur_epoch] = max(
+                                projected_weights['pheno_' + cur_pheno + '_' + cur_group + '_' + cur_pheno_loss_key][cur_epoch],
+                                self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('min_weight'))
+
             for cur_signature in self.signature_config.keys():
                 for cur_group in ['loss', 'regularization']:
                     for cur_signature_loss_key in self.signature_config[cur_signature][cur_group].keys():
@@ -168,6 +178,10 @@ class ExtractorController(object):
                             projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][cur_epoch] = min(
                                 projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][cur_epoch],
                                 self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('max_weight'))
+                        if self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('min_weight') is not None:
+                            projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][cur_epoch] = max(
+                                projected_weights['signature_' + cur_signature + '_' + cur_group + '_' + cur_signature_loss_key][cur_epoch],
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('min_weight'))
 
         # Make tabular and print
         table = tabulate(projected_weights, showindex='always', headers='keys')
@@ -231,7 +245,7 @@ class ExtractorController(object):
         # Global epoch
         self.cur_epoch = self.cur_epoch + 1
 
-        # Main latent epoch weight progression
+        # Main latent epoch dynamic weight
         if prog_main:
             # TODO: also implement selection of main latent loss/regularization here (not sure if useful)
             for cur_group in ['loss', 'regularization']:
@@ -239,14 +253,28 @@ class ExtractorController(object):
                     self.main_epoch[cur_group][cur_main_loss_key] += 1
                     if self.main_epoch[cur_group][cur_main_loss_key] >= \
                             self.main_latent_config[cur_group][cur_main_loss_key]['progressive_start_epoch']:
-                        self.main_loss_weight[cur_group][cur_main_loss_key] *= \
-                            self.main_latent_config[cur_group][cur_main_loss_key]['progressive_const']
+                        if self.main_latent_config[cur_group][cur_main_loss_key].get('progressive_mode') is None:
+                            # By default, multiply (also for back-compatibility purpose)
+                            self.main_loss_weight[cur_group][cur_main_loss_key] *= \
+                                self.main_latent_config[cur_group][cur_main_loss_key]['progressive_const']
+                        elif self.main_latent_config[cur_group][cur_main_loss_key].get('progressive_mode') == 'multiply':
+                            self.main_loss_weight[cur_group][cur_main_loss_key] *= \
+                                self.main_latent_config[cur_group][cur_main_loss_key]['progressive_const']
+                        elif self.main_latent_config[cur_group][cur_main_loss_key].get('progressive_mode') == 'increment':
+                            self.main_loss_weight[cur_group][cur_main_loss_key] += \
+                                self.main_latent_config[cur_group][cur_main_loss_key]['progressive_const']
+                        else:
+                            raise NotImplementedError('Dynamic weight mode not supported')
                     if self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight') is not None:
                         self.main_loss_weight[cur_group][cur_main_loss_key] = min(
                             self.main_loss_weight[cur_group][cur_main_loss_key],
                             self.main_latent_config[cur_group][cur_main_loss_key].get('max_weight'))
+                    if self.main_latent_config[cur_group][cur_main_loss_key].get('min_weight') is not None:
+                        self.main_loss_weight[cur_group][cur_main_loss_key] = max(
+                            self.main_loss_weight[cur_group][cur_main_loss_key],
+                            self.main_latent_config[cur_group][cur_main_loss_key].get('min_weight'))
 
-        # Phenotype supervision and regularization loss weight progression
+        # Phenotype supervision and regularization loss dynamic weight
         if prog_pheno:
             if selected_pheno is None:
                 selected_pheno = {idx: {'loss': '*', 'regularization': '*'} for idx in self.pheno_config.keys()}
@@ -260,14 +288,27 @@ class ExtractorController(object):
                         self.pheno_epoch[cur_pheno][cur_group][cur_pheno_loss_key] += 1
                         if self.pheno_epoch[cur_pheno][cur_group][cur_pheno_loss_key] >= \
                                 self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_start_epoch']:
-                            self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] *= \
-                                self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_const']
+                            if self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('progressive_mode') is None:
+                                self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] *= \
+                                    self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_const']
+                            elif self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('progressive_mode') == 'multiply':
+                                self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] *= \
+                                    self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_const']
+                            elif self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('progressive_mode') == 'increment':
+                                self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] += \
+                                    self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key]['progressive_const']
+                            else:
+                                raise NotImplementedError('Dynamic weight mode not supported')
                         if self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight') is not None:
                             self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] = min(
                                 self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key],
                                 self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('max_weight'))
+                        if self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('min_weight') is not None:
+                            self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key] = max(
+                                self.pheno_loss_weight[cur_pheno][cur_group][cur_pheno_loss_key],
+                                self.pheno_config[cur_pheno][cur_group][cur_pheno_loss_key].get('min_weight'))
 
-        # Signature supervision and regularization loss progression
+        # Signature supervision and regularization loss dynamic weight
         if prog_signature:
             if selected_signature is None:
                 selected_signature = {idx: {'loss': '*', 'regularization': '*'} for idx in self.signature_config.keys()}
@@ -282,15 +323,30 @@ class ExtractorController(object):
                         if self.signature_epoch[cur_signature][cur_group][cur_signature_loss_key] >= \
                                 self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
                                     'progressive_start_epoch']:
-                            self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] *= \
-                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
-                                    'progressive_const']
+                            if self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('progressive_mode') is None:
+                                self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] *= \
+                                    self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
+                                        'progressive_const']
+                            elif self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('progressive_mode') == 'multiply':
+                                self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] *= \
+                                    self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
+                                        'progressive_const']
+                            elif self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get('progressive_mode') == 'sum':
+                                self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] += \
+                                    self.signature_config[cur_signature][cur_group][cur_signature_loss_key][
+                                        'progressive_const']
                         if self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get(
                                 'max_weight') is not None:
                             self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] = min(
                                 self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key],
                                 self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get(
                                     'max_weight'))
+                        if self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get(
+                                'min_weight') is not None:
+                            self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key] = max(
+                                self.signature_loss_weight[cur_signature][cur_group][cur_signature_loss_key],
+                                self.signature_config[cur_signature][cur_group][cur_signature_loss_key].get(
+                                    'min_weight'))
 
         if self.verbose:
             print('[Extractor Controller]: next epoch, current global epoch:', self.cur_epoch)
@@ -400,7 +456,8 @@ class ExtractorController(object):
              forward_pheno=True, selected_pheno=None,
              forward_signature=True, selected_signature=None,
              forward_reconstruction=True, forward_main_latent=True,
-             dump_forward_results=False):
+             dump_forward_results=False,
+             detach=False, detach_from=''):
         """
         Calculate loss
         :param batch: batch of data to calculate loss
@@ -484,7 +541,8 @@ class ExtractorController(object):
                              forward_signature=len(signature_select_fwd) > 0,
                              selected_signature=signature_select_fwd,
                              forward_pheno=len(pheno_select_fwd) > 0,
-                             selected_pheno=pheno_select_fwd)
+                             selected_pheno=pheno_select_fwd,
+                             detach=detach, detach_from=detach_from)
 
         # Reconstruction Loss
         main_loss = {'loss': dict(), 'regularization': dict()}
@@ -527,23 +585,36 @@ class ExtractorController(object):
                                                                  internal=self.pheno_config[cur_pheno]['loss'])
                 for cur_pheno_loss_key in selected_pheno_loss_keys:
                     cur_pheno_loss = self.pheno_config[cur_pheno]['loss'][cur_pheno_loss_key]
+
+                    cur_pheno_out = fwd_res['pheno_out'][cur_pheno]
+                    # Handle GRL/GNL requests (re-calculate from pheno_lat)
+                    if cur_pheno_loss.get('enable_GRL') == 'True':
+                        cur_pheno_lat = fwd_res['lat_pheno'][cur_pheno]
+                        cur_pheno_lat = ReverseLayerF.apply(cur_pheno_lat)
+                        cur_pheno_out = self.model.model['pheno_models'][cur_pheno](cur_pheno_lat)
+                    if cur_pheno_loss.get('enable_GNL') == 'True':
+                        cur_pheno_lat = fwd_res['lat_pheno'][cur_pheno]
+                        cur_pheno_lat = NeutralizeLayerF.apply(cur_pheno_lat)
+                        cur_pheno_out = self.model.model['pheno_models'][cur_pheno](cur_pheno_lat)
+
                     if cur_pheno_loss['type'] == 'NLL':
                         pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0])
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
-                            torch.nn.functional.nll_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
+                            torch.nn.functional.nll_loss(cur_pheno_out, pheno_ans)
                     elif cur_pheno_loss['type'] == 'MSE' or cur_pheno_loss['type'] == 'L2':
                         pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0], -1)
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
-                            torch.nn.functional.mse_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
+                            torch.nn.functional.mse_loss(cur_pheno_out, pheno_ans)
                     elif cur_pheno_loss['type'] == 'L1':
                         pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0], -1)
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
-                            torch.nn.functional.l1_loss(fwd_res['pheno_out'][cur_pheno], pheno_ans)
+                            torch.nn.functional.l1_loss(cur_pheno_out, pheno_ans)
                     else:
                         print('Unsupported phenotype supervision loss type.')
                         raise ValueError
                     pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] *= self.pheno_loss_weight[cur_pheno]['loss'][
                         cur_pheno_loss_key]
+
                 # Phenotype regularization loss
                 selected_pheno_reg_loss_keys = self.select_loss_dict(
                     selection=selected_pheno[cur_pheno]['regularization'],
@@ -551,8 +622,16 @@ class ExtractorController(object):
                 for cur_pheno_reg_loss_key in selected_pheno_reg_loss_keys:
                     cur_pheno_reg_loss = self.pheno_config[cur_pheno]['regularization'][cur_pheno_reg_loss_key]
                     if cur_pheno_reg_loss['type'] != 'none':
+                        cur_pheno_lat = fwd_res['lat_pheno'][cur_pheno]
+                        # Handle GRL/GNL requests
+                        if cur_pheno_reg_loss.get('enable_GRL') == 'True':
+                            cur_pheno_lat = ReverseLayerF.apply(cur_pheno_lat)
+                        if cur_pheno_reg_loss.get('enable_GNL') == 'True':
+                            cur_pheno_lat = NeutralizeLayerF.apply(cur_pheno_lat)
+
+                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0])
                         pheno_loss[cur_pheno]['regularization'][cur_pheno_reg_loss_key] = \
-                            self.regularize(tensor=fwd_res['lat_pheno'][cur_pheno],
+                            self.regularize(tensor=cur_pheno_lat,
                                             regularization_config=self.pheno_config[cur_pheno]['regularization'][
                                                 cur_pheno_reg_loss_key],
                                             supervision=pheno_ans)
@@ -574,12 +653,24 @@ class ExtractorController(object):
                     internal=self.signature_config[cur_signature]['loss'])
                 for cur_signature_loss_key in selected_signature_loss_keys:
                     cur_signature_loss = self.signature_config[cur_signature]['loss'][cur_signature_loss_key]
+
+                    cur_signature_out = fwd_res['signature_out'][cur_signature]
+                    # Handle GRL/GNL requests (re-calc)
+                    if cur_signature_loss.get('enable_GRL') == 'True':
+                        cur_signature_lat = fwd_res['lat_signature'][cur_signature]
+                        cur_signature_lat = ReverseLayerF.apply(cur_signature_lat)
+                        cur_signature_out = self.model.model['signature_regressors'][cur_signature](cur_signature_lat)
+                    if cur_signature_loss.get('enable_GNL') == 'True':
+                        cur_signature_lat = fwd_res['lat_signature'][cur_signature]
+                        cur_signature_lat = NeutralizeLayerF.apply(cur_signature_lat)
+                        cur_signature_out = self.model.model['signature_regressors'][cur_signature](cur_signature_lat)
+
                     if cur_signature_loss['type'] == 'MSE' or cur_signature_loss['type'] == 'L2':
                         signature_loss[cur_signature]['loss'][cur_signature_loss_key] = \
-                            torch.nn.functional.mse_loss(fwd_res['signature_out'][cur_signature], signature_ans)
+                            torch.nn.functional.mse_loss(cur_signature_out, signature_ans)
                     elif cur_signature_loss['type'] == 'L1':
                         signature_loss[cur_signature]['loss'][cur_signature_loss_key] = \
-                            torch.nn.functional.l1_loss(fwd_res['signature_out'][cur_signature], signature_ans)
+                            torch.nn.functional.l1_loss(cur_signature_out, signature_ans)
                     else:
                         print('Unsupported signature supervision loss type.')
                         raise ValueError
@@ -594,8 +685,16 @@ class ExtractorController(object):
                         cur_signature_reg_loss_key]
                     if cur_signature_reg_loss['type'] != 'none':
                         # TODO: support of supervised regularization (e.g. approximate regions based on bins of expression values)
+
+                        # Handle GRL/GNL requests
+                        cur_signature_lat = fwd_res['lat_signature'][cur_signature]
+                        if cur_signature_reg_loss.get('enable_GRL') == 'True':
+                            cur_signature_lat = ReverseLayerF.apply(cur_signature_lat)
+                        if cur_signature_reg_loss.get('enable_GNL') == 'True':
+                            cur_signature_lat = NeutralizeLayerF.apply(cur_signature_lat)
+
                         signature_loss[cur_signature]['regularization'][cur_signature_reg_loss_key] = \
-                            self.regularize(tensor=fwd_res['lat_signature'][cur_signature],
+                            self.regularize(tensor=cur_signature_lat,
                                             regularization_config=
                                             self.signature_config[cur_signature]['regularization'][
                                                 cur_signature_reg_loss_key])
@@ -616,7 +715,8 @@ class ExtractorController(object):
               backward_reconstruction_loss=True, backward_main_latent_regularization=True,
               backward_pheno_loss=True, selected_pheno: dict = None,
               backward_signature_loss=True, selected_signature: dict = None,
-              suppress_backward=False):
+              suppress_backward=False,
+              detach=False, detach_from=''):
         """
         Train model using specified batch.
         :param batch: batched data, obtained from rna_count dataset
@@ -639,7 +739,8 @@ class ExtractorController(object):
                          forward_main_latent=backward_main_latent_regularization,
                          forward_pheno=backward_pheno_loss, selected_pheno=selected_pheno,
                          forward_signature=backward_signature_loss, selected_signature=selected_signature,
-                         dump_forward_results=False)
+                         dump_forward_results=False,
+                         detach=detach, detach_from=detach_from)
 
         total_loss = torch.Tensor([0.])
         if self.device == 'cuda':

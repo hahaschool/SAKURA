@@ -18,7 +18,7 @@ class SCRNASeqCountDataSparse(Dataset):
     "Accepts matrixMM (could be dgcmatrix in R) as data contained (will still load everything into memory, but using sparse matrix now)."
 
     def __init__(self, gene_MM_path, gene_name_csv_path, cell_name_csv_path,
-                 pheno_csv_path,
+                 pheno_csv_path, pheno_df_dtype=None, pheno_df_na_filter=True,
                  gene_meta_json_path=None, pheno_meta_json_path=None,
                  gene_meta=None, pheno_meta=None,
                  mode='all', verbose=False):
@@ -99,7 +99,7 @@ class SCRNASeqCountDataSparse(Dataset):
             print(self.gene_meta)
 
         # Read phenotype data frame
-        self._pheno_df_orig = pd.read_csv(self.pheno_csv_path, index_col=0, header=0)
+        self._pheno_df_orig = pd.read_csv(self.pheno_csv_path, index_col=0, header=0, dtype=pheno_df_dtype, na_filter=pheno_df_na_filter)
         self.pheno_df = self._pheno_df_orig.copy()
 
         if self.verbose:
@@ -241,12 +241,12 @@ class SCRNASeqCountDataSparse(Dataset):
         return self.gene_expr_mat.shape[1]
 
     def __getitem__(self, item):
-        if self.mode is 'all':
+        if self.mode == 'all':
             return self.export_data(item,
                                     include_raw=True,
                                     include_proc=True,
                                     include_cell_key=True)
-        elif self.mode is 'key':
+        elif self.mode == 'key':
             return self.export_data(item,
                                     include_raw=False,
                                     include_proc=False,
