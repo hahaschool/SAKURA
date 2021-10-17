@@ -2,8 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="24448446-e51a-4947-b1c4-108ac34ea1c4" name="HPC9" url="http:///">
-        <fileTransfer rootFolder="/data/d0/gds/zhzhang" accessType="SFTP" host="hpc9.cse.cuhk.edu.hk" port="22" sshConfigId="e6cfd8dc-3f1c-49a9-91fe-99297fef5ebd" sshConfig="zhzhang@hpc9.cse.cuhk.edu.hk:22 password">
+      <webServer id="24448446-e51a-4947-b1c4-108ac34ea1c4" name="HPC1" url="http:///">
+        <fileTransfer rootFolder="/data/d0/gds/zhzhang" accessType="SFTP" host="hpc1.cse.cuhk.edu.hk" port="22" sshConfigId="e6cfd8dc-3f1c-49a9-91fe-99297fef5ebd" sshConfig="zhzhang@hpc1.cse.cuhk.edu.hk:22 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" maxConnections="50" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
@@ -14,7 +14,7 @@
       <group>
         <name>HPC</name>
         <servers>
-          <name value="HPC9" />
+          <name value="HPC1" />
         </servers>
       </group>
     </groups>

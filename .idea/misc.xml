@@ -989,10 +989,31 @@
             </RMarkdownRenderProfile>
           </value>
         </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX23_07_F_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX23_07_F_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX23_07_F_2d_low/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX23_07_F_2d_low" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
         <entry key="file://$PROJECT_DIR$/runs/EX23_08_A/makeplots.Rmd">
           <value>
             <RMarkdownRenderProfile>
               <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX23_08_A" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX23_09_A/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX23_09_A" />
             </RMarkdownRenderProfile>
           </value>
         </entry>
@@ -1147,6 +1168,902 @@
           <value>
             <RMarkdownRenderProfile>
               <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX25_05_F_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_01/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_01" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_01_A/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_01_A" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_02/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_02" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_02_A/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_02_A" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_03/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_03" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_04/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_04" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_04_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_04_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_04_2d_low/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_04_2d_low" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX26_04_2d_low_5ksupervise/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX26_04_2d_low_5ksupervise" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_01/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX27_01" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_01_AS/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX27_01_AS" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_02/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX27_02" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_02_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX27_02_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_02_AS/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX27_02_AS" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_03/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX27_03_AS/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX27_03_AS" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_01_1k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_01_1k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_01_4k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_01_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_02_1k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_02_1k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_02_1k_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_02_1k_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_02_2k_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_02_2k_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_02_4k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_02_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX28_02_4k_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX28_02_4k_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_01_A_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_01_A_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_02_A_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_02_A_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_02_D_50d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_02_D_50d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_03_B_main_2d_mkr_1d_with_celltype/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_03_B_main_2d_mkr_1d_with_celltype" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_PIS_250_A_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_PIS_250_A_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_A_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_A_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_0pct_with_control_classifier_unsupervised/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_0pct_with_control_classifier_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_0pct_with_control_classifier_unsupervised/make_noised_supervise.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_0pct_with_control_classifier_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct/exanalysis_tabs.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct/make_noised_supervise.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.0001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.0001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.0001_5_SuperviseAddNA_4k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.0001_5_SuperviseAddNA_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.0001_5_SuperviseAddNA_4k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.0001_5_SuperviseAddNA_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_100pct_target_classifier_loss_0.001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct/make_noised_supervise.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct_target_classifier_loss_0.0001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct_target_classifier_loss_0.0001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct_target_classifier_loss_0.0001_5_SuperviseAddNA_2k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct_target_classifier_loss_0.0001_5_SuperviseAddNA_2k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct_target_classifier_loss_0.001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_10pct_target_classifier_loss_0.001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct_target_classifier_loss_0.0001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct_target_classifier_loss_0.0001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct_target_classifier_loss_0.001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct_target_classifier_loss_0.001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct_with_control_classifier/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_AddNoise_5pct_with_control_classifier" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_SuperviseAddNA_4k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_SuperviseAddNA_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-1/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-1" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-2/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-2" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-3/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-3" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-4/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_WD_1e-4" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_1k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_1k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_1k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_1k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_2k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_2k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_2k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_2k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_4k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_4k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5_SuperviseAddNA_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.001_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.001_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.001_5_SuperviseAddNA_4k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.001_5_SuperviseAddNA_4k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.005_5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_classifier_target_weight_0.005_5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_H_0.2/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_H_0.2" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_H_0.5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_H_0.5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.2/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.2" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.2_H_0.2/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.2_H_0.2" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.5_H_0.5/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_05_P_250_C_50d_dropout_I_0.5_H_0.5" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_A_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_A_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_A_50d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_A_50d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_D_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_D_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_D_50d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX29_06_P_Baron_250_D_50d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_25d_AddNoise_0pct_SuperviseAddNA_2k_target_classifier_weight_0.001_5_with_control_classifier_noNA/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_25d_AddNoise_0pct_SuperviseAddNA_2k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_35d_AddNoise_0pct_SuperviseAddNA_2k_target_classifier_weight_0.001_5_with_control_classifier_noNA/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_35d_AddNoise_0pct_SuperviseAddNA_2k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA/make_noised_supervise.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_1k_target_classifier_weight_0.0001_5_with_control_classifier_noNA/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_1k_target_classifier_weight_0.0001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_1k_target_classifier_weight_0.001_5_with_control_classifier_noNA/make_noised_supervise.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_1k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_2k_target_classifier_weight_0.001_5_with_control_classifier_noNA_noreconstruct/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_2k_target_classifier_weight_0.001_5_with_control_classifier_noNA_noreconstruct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_4k_target_classifier_weight_0.05_10_with_control_classifier_noNA/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_0pct_SuperviseAddNA_4k_target_classifier_weight_0.05_10_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_100pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_100pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_5pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA/make_noised_supervise.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX31_H_50d_AddNoise_5pct_SuperviseAddNA_0k_target_classifier_weight_0.001_5_with_control_classifier_noNA" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX32_H3_DMSO_50d_5mkr_without_celltype/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX32_H3_DMSO_50d_5mkr_without_celltype" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_2d_L12C_5_0.1_20_CCReg_0.001_1.001_1_noGRL/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_2d_L12C_5_0.1_20_CCReg_0.001_1.001_1_noGRL" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_2d_L12C_5_0.1_20_CCReg_0.01_1.001_1_noGRL/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_2d_L12C_5_0.1_20_CCReg_0.01_1.001_1_noGRL" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_2d_L12C_5_0.1_20_CCReg_0_0_0_noGRL/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_2d_L12C_5_0.1_20_CCReg_0_0_0_noGRL" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.001_1.001_1_noGRL/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.001_1.001_1_noGRL" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.001_1.001_1_noGRL_withcontrol/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.001_1.001_1_noGRL_withcontrol" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.001_1.001_1_withGRL_correct/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.001_1.001_1_withGRL_correct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.1_1.01_10_withGRL_correct/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0.1_1.01_10_withGRL_correct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_noGRL/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_noGRL" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_noGRL_withcontrol/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_noGRL_withcontrol" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_noGRL_withcontrol_FCR/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_noGRL_withcontrol_FCR" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_withGRL_correct/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/EX33_50d_L12C_5_0.1_20_CCReg_0_0_0_withGRL_correct" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC01_CMN_ADT_ADT_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC01_CMN_ADT_ADT_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC01_CMN_ADT_RNA_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC01_CMN_ADT_RNA_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_ADT_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_ADT_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_ADT_lognorm_with_cell_type_supervision_0.05_10/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_ADT_lognorm_with_cell_type_supervision_0.05_10" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_RNA_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_RNA_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_RNA_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC01_CMN_RNA_RNA_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_ADT_RNA_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_ADT_RNA_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_ADT_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_ADT_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised/inspect_activation.Rmd.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_ReLU/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_ReLU" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_plus1/inspect_activation.Rmd.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_plus1" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_unsupervised/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX22_01/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX22_01" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX22_05/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX22_05" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX22_11_B/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX22_11_B" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX23_07_B/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX23_07_B" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX23_07_F/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX23_07_F" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX24_01/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX24_01" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX24_02/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX24_02" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX25_05_B/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX25_05_B" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX25_05_B_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX25_05_B_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX25_05_F/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX25_05_F" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX25_05_F_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX25_05_F_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX28_02_1k_2d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX28_02_1k_2d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX28_02_2k/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX28_02_2k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX29_05_P_250_C_50d/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX29_05_P_250_C_50d" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX29_05_P_250_C_50d_AddNoise_5pct_target_classifier_loss_0.0001_5_SuperviseAddNA_1k/extra_analysis_cellQA.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX29_05_P_250_C_50d_AddNoise_5pct_target_classifier_loss_0.0001_5_SuperviseAddNA_1k" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs_done/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs_done/EX29_05_P_250_C_50d_classifier_target_weight_0.0001_5" />
             </RMarkdownRenderProfile>
           </value>
         </entry>

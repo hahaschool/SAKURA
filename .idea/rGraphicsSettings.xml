@@ -2,11 +2,11 @@
 <project version="4">
   <component name="RGraphicsSettings">
     <option name="darkMode" value="false" />
-    <option name="height" value="1410" />
-    <option name="imageNumber" value="9" />
-    <option name="outputDirectory" value="$USER_HOME$/Downloads" />
+    <option name="height" value="1180" />
+    <option name="imageNumber" value="12" />
+    <option name="outputDirectory" value="$PROJECT_DIR$/../Downloads" />
     <option name="resolution" value="150" />
     <option name="version" value="1" />
-    <option name="width" value="611" />
+    <option name="width" value="1728" />
   </component>
 </project>
