@@ -52,9 +52,16 @@ class SCRNASeqCountDataSparse(Dataset):
         # Read cell names
         self.cell_names = pd.read_csv(self.cell_name_csv_path, index_col=0)
         # Build pandas sparse DataFrame
-        self._gene_expr_mat_orig = pd.DataFrame.sparse.from_spmatrix(data=self._gene_expr_mat_orig,
-                                                                     index=self.gene_names.iloc[:, 0],
-                                                                     columns=self.cell_names.iloc[:, 0])
+        if isinstance(self._gene_expr_mat_orig, np.ndarray):
+            # Fallback to dense matrix
+            self._gene_expr_mat_orig = pd.DataFrame(data=self._gene_expr_mat_orig,
+                                                    index=self.gene_names.iloc[:, 0],
+                                                    columns=self.cell_names.iloc[:, 0])
+        else:
+            self._gene_expr_mat_orig = pd.DataFrame.sparse.from_spmatrix(data=self._gene_expr_mat_orig,
+                                                                         index=self.gene_names.iloc[:, 0],
+                                                                         columns=self.cell_names.iloc[:, 0])
+
         self._gene_expr_mat_orig.columns.name = 'cell'
         self._gene_expr_mat_orig.index.name = 'gene'
         self.gene_expr_mat = self._gene_expr_mat_orig.copy()
@@ -163,6 +170,15 @@ class SCRNASeqCountDataSparse(Dataset):
                     include_raw=True,
                     include_proc=True,
                     include_cell_key=True):
+        """
+        Export a batch of data given 'item' as index.
+        :param item: index
+        :param include_raw: should the unprocessed, subsetted expression matrix and phenotype data frame be exported
+        :param include_proc: should the processed data (following procedures specified in the configs) be exported
+        :param include_cell_key: should names/keys of the cells be exported
+        :return:
+        """
+
         # Type adaptation: when 'item' is a single index, convert it to list
         if type(item) is int:
             item = [item]

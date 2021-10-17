@@ -27,7 +27,7 @@ def modulebuilder(cfg):
 
 
 class FCDecoder(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_neurons=50, hidden_layers=3, config=None):
+    def __init__(self, input_dim, output_dim, hidden_neurons=50, hidden_layers=3, output_activation_function='identity', config=None):
         super(FCDecoder, self).__init__()
         self.model_list = nn.ModuleList()
         self.config = config
@@ -54,8 +54,15 @@ class FCDecoder(nn.Module):
 
                 self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
 
+                if output_activation_function == 'relu':
+                    self.model_list.append(nn.ReLU())
+                elif output_activation_function == 'softmax':
+                    self.model_list.append(nn.Softmax())
+                elif output_activation_function != 'identity':
+                    raise NotImplementedError('Unsupported activation function')
+
         else:
-            self.model_list=modulebuilder(config)
+            self.model_list = modulebuilder(config)
 
     def forward(self, x):
         for cur_model in self.model_list:
@@ -147,19 +154,43 @@ class FCClassifier(nn.Module):
     Use entire latent space as input, or designated dimension(s)
     Training goal is to predict cell labels (e.g. cell type, group)
     """
-    def __init__(self, input_dim, output_dim, config = None):
+
+    def __init__(self, input_dim, output_dim,
+                 hidden_neurons=5,
+                 dropout=False,
+                 dropout_input=False, dropout_input_p=0.5,
+                 dropout_hidden=False, dropout_hidden_p=0.5,
+                 config=None):
         super(FCClassifier, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.config = config
+        self.hidden_neurons = hidden_neurons
+        self.dropout_input = dropout_input
+        self.dropout_input_p = dropout_input_p
+        self.dropout_hidden = dropout_hidden
+        self.dropout_hidden_p = dropout_hidden_p
         self.model_list = nn.ModuleList()
         if self.config is None:
             # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> LogSoftmax --> Output
-            self.hidden_neurons=10
+
+            # Dropout input data
+            if dropout and dropout_input:
+                self.model_list.append(nn.Dropout(p=dropout_input_p))
             self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
             self.model_list.append(nn.CELU())
+
+            # Dropout hidden layer activations
+            if dropout and dropout_hidden:
+                self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
             self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
             self.model_list.append(nn.CELU())
+
+            # Dropout hidden layer activations
+            if dropout and dropout_hidden:
+                self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
             self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
             self.model_list.append(nn.LogSoftmax(dim=1))
         else:
@@ -176,7 +207,8 @@ class FCRegressor(nn.Module):
     Model used for supervising expression levels for selected genes
     Use entire latent space as input, or designated dimension(s)
     """
-    def __init__(self, input_dim, output_dim, config=None, hidden_neurons=5):
+
+    def __init__(self, input_dim, output_dim, config=None, hidden_neurons=5, output_activation_function='identity'):
         super(FCRegressor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -190,6 +222,12 @@ class FCRegressor(nn.Module):
             self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
             self.model_list.append(nn.CELU())
             self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+            if output_activation_function == 'relu':
+                self.model_list.append(nn.ReLU())
+            elif output_activation_function == 'softmax':
+                self.model_list.append(nn.Softmax())
+            elif output_activation_function != 'identity':
+                raise NotImplementedError('Unsupported activation function')
         else:
             self.model_list = modulebuilder(self.config)
         self.model = nn.Sequential(self.model_list)
@@ -230,7 +268,8 @@ class LinRegressor(nn.Module):
     Input is entire latent space, or designated deiension(s)
     Expected to make latent space aligned along linear structure
     """
-    def __init__(self, input_dim, output_dim, config=None):
+
+    def __init__(self, input_dim, output_dim, config=None, output_activation_function='identity'):
         super(LinRegressor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -239,6 +278,12 @@ class LinRegressor(nn.Module):
         if self.config is None:
             # Input --> Linear --> Output
             self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+            if output_activation_function == 'relu':
+                self.model_list.append(nn.ReLU())
+            elif output_activation_function == 'softmax':
+                self.model_list.append(nn.Softmax())
+            elif output_activation_function != 'identity':
+                raise NotImplementedError('Unsupported activation function')
         else:
             self.model_list = modulebuilder(self.config)
 

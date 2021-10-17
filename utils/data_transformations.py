@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
+import sklearn
 import sklearn.preprocessing as skprep
 import torch
+from packaging import version
 
 
 class ToTensor(object):
@@ -68,7 +70,12 @@ class ToOrdinal(object):
             if type(order) is list:
                 order = [order]
 
-        ortrs = skprep.OrdinalEncoder(categories=order, handle_unknown=handle_unknown, unknown_value=unknown_value, dtype=np.int).fit(sample)
+        # Resolving compatibility of older sklearns
+        if version.parse(sklearn.__version__) >= version.parse('0.24'):
+            ortrs = skprep.OrdinalEncoder(categories=order, handle_unknown=handle_unknown, unknown_value=unknown_value, dtype=np.int).fit(sample)
+        else:
+            ortrs = skprep.OrdinalEncoder(categories=order, dtype=np.int).fit(sample)
+
         return ortrs.transform(sample)
 
 

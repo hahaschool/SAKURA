@@ -1,33 +1,36 @@
+from torch import tensor
 from torch.autograd import Function
 
 
 class ReverseLayerF(Function):
+    # https://github.com/janfreyberg/pytorch-revgrad/blob/master/src/pytorch_revgrad/functional.py
+    @staticmethod
+    def forward(ctx, input_, alpha_=1.0):
+        alpha_ = tensor(alpha_, requires_grad=False)
+        ctx.save_for_backward(input_, alpha_)
+        output = input_
+        return output
 
     @staticmethod
-    def forward(ctx, x, alpha=1.0):
-        ctx.alpha = alpha
-        return x.view_as(x)
-
-    """
-    The return x.view_as(x) seems to be necessary, because otherwise backward is not being called,
-    I guess that as optimization Autograd checks if the Function modified the tensor to see if backward should be called.
-    
-    From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/3
-    """
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        output = grad_output.neg() * ctx.alpha
-        return output, None
+    def backward(ctx, grad_output):  # pragma: no cover
+        grad_input = None
+        _, alpha_ = ctx.saved_tensors
+        if ctx.needs_input_grad[0]:
+            grad_input = -grad_output * alpha_
+        return grad_input, None
 
 
 class NeutralizeLayerF(Function):
+    # Modified from https://github.com/janfreyberg/pytorch-revgrad/blob/master/src/pytorch_revgrad/functional.py
+    @staticmethod
+    def forward(ctx, input_):
+        ctx.save_for_backward(input_)
+        output = input_
+        return output
 
     @staticmethod
-    def forward(ctx, x):
-        return x.view_as(x)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        output = grad_output * 0.0
-        return output, None
+    def backward(ctx, grad_output):  # pragma: no cover
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            grad_input = 0.0
+        return grad_input, None

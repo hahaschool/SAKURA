@@ -26,11 +26,15 @@ def parse_args():
     parser.add_argument('-v', '--verbose', type=bool, default=False, help='verbose console outputs')
     parser.add_argument('-s', '--suppress_train', type=bool, default=False, help='suppress model training, only setup dataset and model')
     parser.add_argument('-r', '--resume', type=str, default='', help='resume training process from saved checkpoint file')
+    parser.add_argument('-i', '--inference', type=str, default='', help='perform inference from saved checkpoint file containing models')
+    parser.add_argument('-y', '--inference_story', type=str, default='./inference.json', help='story file of inference')
+    parser.add_argument('-x', '--suppress_tensorboardX', type=bool, default=False, help='suppress Logger to initiate tensorboardX (to prevent flushing logs)')
     return parser.parse_args()
 
 
 class SAKRA(object):
-    def __init__(self, config_json_path, verbose=False, suppress_train=False):
+    def __init__(self, config_json_path, verbose=False,
+                 suppress_train=False, suppress_tensorboardX=False):
 
         # Read configurations for arguments
         with open(config_json_path, 'r') as f:
@@ -63,6 +67,7 @@ class SAKRA(object):
             torch.backends.cudnn.enabled = False
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
+            # torch.use_deterministic_algorithms(True)
 
         # Setup dataset
         self.setup_dataset()
@@ -71,7 +76,9 @@ class SAKRA(object):
         self.generate_splits()
 
         # Get actual gene count (input dimension)
-        input_genes = self.count_data.gene_expr_mat.shape[0]
+        input_genes = self.count_data[0]['expr']['all'].shape[1]
+        if self.verbose:
+            print('Input gene number for building model:', input_genes)
 
         # Setup model
         self.model = Extractor(input_dim=input_genes,
@@ -88,7 +95,7 @@ class SAKRA(object):
                                               verbose=self.verbose)
 
         # Setup logger
-        self.logger = Logger(log_path=self.log_path)
+        self.logger = Logger(log_path=self.log_path, suppress_tensorboardX=suppress_tensorboardX)
 
         # Save settings to log folder
         if self.config['dump_configs'] == 'True':
@@ -111,12 +118,16 @@ class SAKRA(object):
             self.pheno_csv_path = self.config['dataset'].get('pheno_csv_path')
             self.pheno_meta_path = self.config['dataset'].get('pheno_meta_path')
             self.signature_config_path = self.config['dataset'].get('signature_config_path')
+            self.pheno_df_dtype = self.config['dataset'].get('pheno_df_dtype')
+            self.pheno_df_na_filter = self.config['dataset'].get('pheno_df_na_filter') == 'True'
             # TODO: load pre-defined splits (cell groups)
             # self.cell_group_config_path = self.config['dataset']['cell_group_config_path']
             # Import count data
             self.count_data = rna_count.SCRNASeqCountData(gene_csv_path=self.expr_csv_path,
                                                           pheno_csv_path=self.pheno_csv_path,
+                                                          pheno_df_dtype=self.pheno_df_dtype,
                                                           pheno_meta_json_path=self.pheno_meta_path,
+                                                          pheno_df_na_filter=self.pheno_df_na_filter,
                                                           mode='all',
                                                           verbose=self.verbose)
         elif self.config['dataset']['type'] == 'rna_count_sparse':
@@ -377,7 +388,8 @@ class SAKRA(object):
               train_signature=True, selected_signature=None,
               epoch=50, batch_size=100,
               tick_controller_epoch=True,
-              make_logs=True, dump_latent=True, log_prefix='train', latent_prefix='',
+              make_logs=True, log_prefix='train', log_loss_groups=['loss', 'regularization'], save_raw_loss=False,
+              dump_latent=True, latent_prefix='',
               test_every_epoch=False, test_on_segment=False, test_segment=2000, tests=None,
               checkpoint_on_segment=False, checkpoint_segment=2000, checkpoint_prefix='', checkpoint_save_arch=False,
               resume=False, resume_dict=None,
@@ -492,7 +504,7 @@ class SAKRA(object):
                                                        backward_pheno_loss=train_pheno, selected_pheno=selected_pheno,
                                                        backward_signature_loss=train_signature,
                                                        selected_signature=selected_signature,
-                                                       detach=detach, detach_from=detach_from)
+                                                       detach=detach, detach_from=detach_from, save_raw_loss=save_raw_loss)
 
                 # Verbose logging
                 if self.verbose:
@@ -501,7 +513,7 @@ class SAKRA(object):
                 # Make logs
                 if make_logs:
                     self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
-                                         loss_name_prefix=log_prefix)
+                                         loss_name_prefix=log_prefix, selected_loss_group=log_loss_groups)
 
                 # Segmental Test
                 if test_on_segment and (cur_tick + 1) % test_segment == 0:
@@ -514,8 +526,10 @@ class SAKRA(object):
                                   test_signature=True, selected_signature=None,
                                   make_logs=(cur_test.get('make_logs') == 'True'),
                                   log_prefix=cur_test.get('log_prefix', 'test'),
+                                  log_loss_groups=log_loss_groups,
                                   dump_latent=(cur_test.get('dump_latent') == 'True'),
-                                  latent_prefix=cur_test.get('latent_prefix', ''))
+                                  latent_prefix=cur_test.get('latent_prefix', ''),
+                                  save_raw_loss=save_raw_loss)
 
                 # Tick controller
                 self.controller.tick()
@@ -554,8 +568,10 @@ class SAKRA(object):
                               test_signature=True, selected_signature=None,
                               make_logs=(cur_test.get('make_logs') == 'True'),
                               log_prefix=cur_test.get('log_prefix', 'test'),
+                              log_loss_groups=log_loss_groups,
                               dump_latent=(cur_test.get('dump_latent') == 'True'),
-                              latent_prefix=cur_test.get('latent_prefix', ''))
+                              latent_prefix=cur_test.get('latent_prefix', ''),
+                              save_raw_loss=save_raw_loss)
 
         # Terminal test if segmental test is on
         if test_on_segment and (test_every_epoch == False):
@@ -568,8 +584,10 @@ class SAKRA(object):
                           test_signature=True, selected_signature=None,
                           make_logs=(cur_test.get('make_logs') == 'True'),
                           log_prefix=cur_test.get('log_prefix', 'test'),
+                          log_loss_groups=log_loss_groups,
                           dump_latent=(cur_test.get('dump_latent') == 'True'),
-                          latent_prefix=cur_test.get('latent_prefix', ''))
+                          latent_prefix=cur_test.get('latent_prefix', ''),
+                          save_raw_loss=save_raw_loss)
 
         # Terminal checkpoint when segmental checkpoint is on
         if checkpoint_on_segment:
@@ -582,8 +600,13 @@ class SAKRA(object):
              test_main=True,
              test_pheno=True, selected_pheno=None,
              test_signature=True, selected_signature=None,
-             make_logs=False, dump_latent=True, log_prefix='test', latent_prefix='',
-             dump_pre_encoder_output=False, dump_reconstructed_output=False):
+             make_logs=False, log_prefix='test', log_loss_groups=['loss', 'regularization'],
+             dump_latent=True, latent_prefix='',
+             dump_pre_encoder_output=False,
+             dump_reconstructed_output=False, reconstructed_output_naming='dimid',
+             dump_predicted_phenos=False,
+             dump_predicted_signatures=False,
+             compression='none', save_raw_loss=False):
 
         selected_split_mask = self.splits[split_id]
 
@@ -598,34 +621,50 @@ class SAKRA(object):
 
         # Eval on split
         controller_ret = self.controller.eval(cur_batch,
-                                              forward_signature=test_signature,
-                                              selected_signature=selected_signature,
+                                              forward_signature=test_signature, selected_signature=selected_signature,
                                               forward_pheno=test_pheno, selected_pheno=selected_pheno,
                                               forward_reconstruction=test_main, forward_main_latent=True,
-                                              dump_latent=dump_latent)
+                                              dump_latent=dump_latent, save_raw_loss=save_raw_loss)
 
         # Log losses in tensorboard (by using Logger)
         if make_logs:
             self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
-                                 loss_name_prefix=log_prefix)
+                                 loss_name_prefix=log_prefix, selected_loss_group=log_loss_groups)
             self.controller.tick()
 
-        # Dump latent space into CSV files
-        if dump_latent:
-            self.logger.dump_latent_to_csv(controller_output=controller_ret,
-                                           dump_main=True,
-                                           dump_pheno=True, selected_pheno=self.selected_pheno,
-                                           dump_signature=True, selected_signature=self.selected_signature,
-                                           rownames=self.count_data.gene_expr_mat.columns[selected_split_mask],
-                                           path=self.log_path + '/' + str(
-                                               self.controller.cur_epoch) + '_' + latent_prefix + '.csv')
+        # Handle CSV path and filename (in case of compression)
+        if compression == 'hdf':
+            csv_path = self.log_path + '/' + str(self.controller.cur_epoch) + '_' + latent_prefix + '.h5'
+        elif compression == 'gzip':
+            csv_path = self.log_path + '/' + str(self.controller.cur_epoch) + '_' + latent_prefix + '.csv.gz'
+        else:
+            csv_path = self.log_path + '/' + str(self.controller.cur_epoch) + '_' + latent_prefix + '.csv'
 
-        # TODO: Dump reconstructed gene expressions and pre-encoder outputs
+        # Dump latent space into CSV files
+        if dump_latent or \
+                dump_pre_encoder_output or \
+                dump_reconstructed_output or \
+                dump_predicted_phenos or \
+                dump_predicted_signatures:
+            self.logger.dump_latent_to_csv(controller_output=controller_ret,
+                                           dump_main=test_main & dump_latent,
+                                           dump_lat_pre=dump_pre_encoder_output,
+                                           dump_re_x=dump_reconstructed_output, re_x_col_naming=reconstructed_output_naming,
+                                           dump_pheno=test_pheno & dump_latent, selected_pheno=self.selected_pheno,
+                                           dump_signature=test_signature & dump_latent, selected_signature=self.selected_signature,
+                                           dump_pheno_out=test_pheno & dump_predicted_phenos,
+                                           dump_signature_out=test_signature & dump_predicted_signatures,
+                                           rownames=self.count_data.gene_expr_mat.columns[selected_split_mask],
+                                           colnames=self.count_data.gene_expr_mat.index,
+                                           path=csv_path,
+                                           compression=compression
+                                           )
+
 
     def train_hybrid(self, split_configs: dict, ticks=50000,
                      hybrid_mode='interleave',
                      prog_loss_weight_mode='epoch_end',
-                     make_logs=True, log_prefix='',
+                     make_logs=True, log_prefix='', log_loss_groups=['loss', 'regularization'], save_raw_loss=False,
                      perform_test=False, test_segmant=2000, tests: dict = None,
                      perform_checkpoint=False, checkpoint_segment=2000, checkpoint_prefix='', checkpoint_save_arch=False,
                      loss_prog_on_test: dict = None,
@@ -767,12 +806,13 @@ class SAKRA(object):
                                                        backward_signature_loss=(split_configs[cur_split_key]['train_signature'] == 'True'),
                                                        selected_signature=split_configs[cur_split_key].get('selected_signature'),
                                                        detach=(split_configs[cur_split_key].get('detach') == 'True'),
-                                                       detach_from=split_configs[cur_split_key].get('detach_from', ''))
+                                                       detach_from=split_configs[cur_split_key].get('detach_from', ''),
+                                                       save_raw_loss=save_raw_loss)
 
                 # Log
                 if make_logs:
                     self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
-                                         loss_name_prefix=log_prefix)
+                                         loss_name_prefix=log_prefix, selected_loss_group=log_loss_groups)
 
                 # Proceed to next tick, tick controller (so that when resume, the model has already been on next tick)
                 self.controller.tick()
@@ -793,13 +833,15 @@ class SAKRA(object):
                     for cur_test in tests:
                         # When test, all latents will be evaluated
                         self.test(split_id=cur_test['on_split'],
-                                  test_main=True,
-                                  test_pheno=True, selected_pheno=None,
-                                  test_signature=True, selected_signature=None,
+                                  test_main=not (cur_test.get('test_main') == 'False'),
+                                  test_pheno=not (cur_test.get('test_pheno') == 'False'), selected_pheno=cur_test.get('selected_pheno'),
+                                  test_signature=not (cur_test.get('test_signature') == 'False'), selected_signature=cur_test.get('selected_signature'),
                                   make_logs=(cur_test.get('make_logs') == 'True'),
-                                  log_prefix=cur_test.get('log_prefix', 'test'),
+                                  log_loss_groups=cur_test.get('log_loss_groups', log_loss_groups),
+                                  log_prefix=cur_test.get('log_prefix', log_prefix),
                                   dump_latent=(cur_test.get('dump_latent') == 'True'),
-                                  latent_prefix=cur_test.get('latent_prefix', ''))
+                                  latent_prefix=cur_test.get('latent_prefix', ''),
+                                  save_raw_loss=save_raw_loss)
 
                     if prog_loss_weight_mode == 'on_test':
                         self.controller.next_epoch(prog_main=(loss_prog_on_test['prog_main'] == 'True'),
@@ -878,12 +920,13 @@ class SAKRA(object):
                                                                       selected_signature=split_configs[cur_split_key].get('selected_signature'),
                                                                       suppress_backward=True,
                                                                       detach=(split_configs[cur_split_key].get('detach') == 'True'),
-                                                                      detach_from=split_configs[cur_split_key].get('detach_from', ''))
+                                                                      detach_from=split_configs[cur_split_key].get('detach_from', ''),
+                                                                      save_raw_loss=save_raw_loss)
                     total_loss += cur_losses[cur_split_key]['total_loss_backwarded']
                     # Log
                     if make_logs:
                         self.logger.log_loss(trainer_output=cur_losses[cur_split_key], tick=self.controller.cur_tick,
-                                             loss_name_prefix=log_prefix)
+                                             loss_name_prefix=log_prefix, selected_loss_group=log_loss_groups)
 
                     # Proceed to next batch for current split
                     split_idx_idx[cur_split_key] += 1
@@ -911,13 +954,15 @@ class SAKRA(object):
                     for cur_test in tests:
                         # When test, all latents will be evaluated
                         self.test(split_id=cur_test['on_split'],
-                                  test_main=True,
-                                  test_pheno=True, selected_pheno=None,
-                                  test_signature=True, selected_signature=None,
+                                  test_main=not (cur_test.get('test_main') == 'False'),
+                                  test_pheno=not (cur_test.get('test_pheno') == 'False'), selected_pheno=cur_test.get('selected_pheno'),
+                                  test_signature=not (cur_test.get('test_signature') == 'False'), selected_signature=cur_test.get('selected_signature'),
                                   make_logs=(cur_test.get('make_logs') == 'True'),
-                                  log_prefix=cur_test.get('log_prefix', 'test'),
+                                  log_loss_groups=cur_test.get('log_loss_groups', log_loss_groups),
+                                  log_prefix=cur_test.get('log_prefix', log_prefix),
                                   dump_latent=(cur_test.get('dump_latent') == 'True'),
-                                  latent_prefix=cur_test.get('latent_prefix', ''))
+                                  latent_prefix=cur_test.get('latent_prefix', ''),
+                                  save_raw_loss=save_raw_loss)
 
                     if prog_loss_weight_mode == 'on_test':
                         self.controller.next_epoch(prog_main=(loss_prog_on_test['prog_main'] == 'True'),
@@ -932,6 +977,14 @@ class SAKRA(object):
                     self.save_checkpoint(training_state=resume_dict,
                                          checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(cur_tick) + '.pth',
                                          save_model_arch=checkpoint_save_arch)
+
+    def train_hybrid_fastload(self):
+        """
+        Will implement the multithread dataloader version of training flowcontrol with storyline.
+
+        :return:
+        """
+        raise NotImplementedError
 
     def save_checkpoint(self, training_state=None,
                         checkpoint_path=None,
@@ -959,6 +1012,34 @@ class SAKRA(object):
         random.setstate(checkpoint['random_state'])
 
         return checkpoint
+
+    def execute_inference(self, story: list, resume_dict=None):
+        if self.verbose:
+            print('Executing inference routine')
+            print(story)
+
+        # No need to handle resume here, since there will be no training
+
+        for cur_story_item in story:
+            if self.verbose:
+                print('Performing inference on story:', cur_story_item.get('remark'))
+                print(cur_story_item)
+            cur_action = cur_story_item.get('action', 'test')
+
+            if cur_action == 'test':
+                # Test model on selected dataset
+                self.test(split_id=cur_story_item['on_split'],
+                          test_main=(cur_story_item.get('test_main') == 'True'),
+                          test_pheno=(cur_story_item.get('test_pheno') == 'True'), selected_pheno=cur_story_item.get('selected_pheno'),
+                          test_signature=(cur_story_item.get('test_signature') == 'True'), selected_signature=cur_story_item.get('selected_signature'),
+                          make_logs=(cur_story_item.get('make_logs') == 'True'), log_prefix=cur_story_item.get('log_prefix', 'inference'),
+                          dump_latent=(cur_story_item.get('dump_latent') == 'True'), latent_prefix=cur_story_item.get('latent_prefix', ''),
+                          dump_pre_encoder_output=(cur_story_item.get('dump_pre_encoder_output') == 'True'),
+                          dump_reconstructed_output=(cur_story_item.get('dump_reconstructed_output') == 'True'), reconstructed_output_naming=cur_story_item.get('reconstructed_output_naming'),
+                          dump_predicted_phenos=(cur_story_item.get('dump_predicted_phenos') == 'True'),
+                          dump_predicted_signatures=(cur_story_item.get('dump_predicted_signatures') == 'True'),
+                          compression=(cur_story_item.get('compression', 'none')),
+                          save_raw_loss=(cur_story_item.get('save_raw_loss') == 'True'))
 
     def train_story(self, story: list,
                     resume=False, resume_dict=None):
@@ -993,6 +1074,7 @@ class SAKRA(object):
                            epoch=cur_story_item['epochs'],
                            make_logs=(cur_story_item.get('make_logs') == 'True'),
                            log_prefix=cur_story_item.get('log_prefix', 'train'),
+                           log_loss_groups=cur_story_item.get('log_loss_groups', ['loss', 'regularization']),
                            batch_size=cur_story_item.get('batch_size'),
                            test_every_epoch=(cur_story_item.get('test_every_epoch') == 'True'),
                            tests=cur_story_item.get('tests'),
@@ -1004,7 +1086,8 @@ class SAKRA(object):
                            checkpoint_save_arch=(cur_story_item.get('checkpoint_save_arch') == 'True'),
                            resume=resume, resume_dict=resume_dict,
                            detach=(cur_story_item.get('detach') == 'True'),
-                           detach_from=cur_story_item.get('detach_from', ''))
+                           detach_from=cur_story_item.get('detach_from', ''),
+                           save_raw_loss=(cur_story_item.get('save_raw_loss') == 'True'))
 
                 # Handle resume completion
                 if resume:
@@ -1020,13 +1103,18 @@ class SAKRA(object):
 
                 # Test model
                 self.test(split_id=cur_story_item['on_split'],
-                          test_main=True,
-                          test_pheno=True, selected_pheno=None,
-                          test_signature=True, selected_signature=None,
-                          make_logs=(cur_story_item.get('make_logs') == 'True'),
-                          log_prefix=cur_story_item.get('log_prefix', 'test'),
-                          dump_latent=(cur_story_item.get('dump_latent') == 'True'),
-                          latent_prefix=cur_story_item.get('latent_prefix', ''))
+                          test_main=(cur_story_item.get('test_main', 'True') == 'True'),
+                          test_pheno=(cur_story_item.get('test_pheno', 'True') == 'True'), selected_pheno=cur_story_item.get('selected_pheno'),
+                          test_signature=(cur_story_item.get('test_signature', 'True') == 'True'), selected_signature=cur_story_item.get('selected_signature'),
+                          make_logs=(cur_story_item.get('make_logs') == 'True'), log_prefix=cur_story_item.get('log_prefix', 'inference'),
+                          log_loss_groups=cur_story_item.get('log_loss_groups', ['loss', 'regularization']),
+                          dump_latent=(cur_story_item.get('dump_latent') == 'True'), latent_prefix=cur_story_item.get('latent_prefix', ''),
+                          dump_pre_encoder_output=(cur_story_item.get('dump_pre_encoder_output') == 'True'),
+                          dump_reconstructed_output=(cur_story_item.get('dump_reconstructed_output') == 'True'), reconstructed_output_naming=cur_story_item.get('reconstructed_output_naming'),
+                          dump_predicted_phenos=(cur_story_item.get('dump_predicted_phenos') == 'True'),
+                          dump_predicted_signatures=(cur_story_item.get('dump_predicted_signatures') == 'True'),
+                          compression=(cur_story_item.get('compression', 'none')),
+                          save_raw_loss=(cur_story_item.get('save_raw_loss') == 'True'))
 
             elif cur_action == 'train_hybrid':
 
@@ -1041,6 +1129,7 @@ class SAKRA(object):
                                   prog_loss_weight_mode=cur_story_item.get('prog_loss_weight_mode'),
                                   make_logs=(cur_story_item.get('make_logs') == 'True'),
                                   log_prefix=cur_story_item.get('log_prefix', ''),
+                                  log_loss_groups=cur_story_item.get('log_loss_groups', ['loss', 'regularization']),
                                   perform_test=(cur_story_item.get('perform_test') == 'True'),
                                   test_segmant=cur_story_item.get('test_segment'),
                                   tests=cur_story_item.get('tests'),
@@ -1049,7 +1138,7 @@ class SAKRA(object):
                                   checkpoint_segment=(cur_story_item.get('checkpoint_segment', 2000)),
                                   checkpoint_prefix=(cur_story_item.get('checkpoint_prefix')),
                                   checkpoint_save_arch=(cur_story_item.get('checkpoint_save_arch') == 'True'),
-                                  resume=resume, resume_dict=resume_dict)
+                                  resume=resume, resume_dict=resume_dict, save_raw_loss=(cur_story_item.get('save_raw_loss') == 'True'))
 
                 # Handle resume completion
                 if resume:
@@ -1065,7 +1154,34 @@ if __name__ == '__main__':
     print('Working directory:', os.getcwd())
 
     args = parse_args()
-    if type(args.resume) is str and len(args.resume) > 0:
+    if type(args.inference) is str and len(args.inference) > 0:
+        if args.verbose:
+            print("Entering inference mode from checkpoint:", args.inference)
+
+        # Load inference story file
+        if args.verbose:
+            print("Loading inference story file:", args.inference_story)
+
+        # Load inference story *list*
+        with open(args.inference_story, 'r') as f:
+            inference_story = json.load(f)
+        if type(inference_story) is dict:
+            inference_story = [inference_story[x] for x in inference_story]
+
+        # Init SAKRA instance
+        instance = SAKRA(config_json_path=args.config,
+                         verbose=args.verbose,
+                         suppress_train=True,
+                         suppress_tensorboardX=args.suppress_tensorboardX)
+
+        # Load session
+        checkpoint = instance.load_checkpoint(args.inference)
+
+        # Execute specified inference routine
+        instance.execute_inference(story=inference_story)
+
+
+    elif type(args.resume) is str and len(args.resume) > 0:
         if args.verbose:
             print("Resuming checkpoint:", args.resume)
 
