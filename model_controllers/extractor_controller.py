@@ -2,6 +2,8 @@ import functools
 
 import torch
 import torch.optim
+import torch.nn.functional
+import torch.linalg
 from tabulate import tabulate
 
 import utils.distributions as distributions
@@ -82,16 +84,7 @@ class ExtractorController(object):
         if self.device == 'cuda':
             self.model.cuda()
 
-        # Setup Optimizer
-        if self.config['optimizer']['type'] == 'RMSProp':
-            self.optimizer = torch.optim.RMSprop(self.model.parameters(),
-                                                 lr=self.config['optimizer']['RMSProp_lr'],
-                                                 alpha=self.config['optimizer']['RMSProp_alpha'],
-                                                 weight_decay=self.config['optimizer'].get('RMSProp_weight_decay', 0),
-                                                 momentum=self.config['optimizer'].get('RMSProp_momentum', 0))
-        else:
-            print("Optimizers other than RMSProp not implemented.")
-            raise NotImplementedError
+        self.setup_optimizer()
 
         if verbose:
             print('===========================')
@@ -102,6 +95,60 @@ class ExtractorController(object):
             print(self.optimizer)
             self.print_weight_projection(expected_epoch=100)
             print('===========================')
+
+
+
+    def __scan_exclude(self, cur_model_type=None, cur_model_name=None):
+        if self.config['optimizer'].get('excludes') is None:
+            if self.verbose:
+                print(cur_model_type, cur_model_name, 'Passed')
+            return True
+        if type(self.config['optimizer'].get('excludes')) is list:
+            for cur_item in self.config['optimizer'].get('excludes'):
+                if self.verbose:
+                    print("Checking", cur_item)
+                if cur_model_type == cur_item['type']:
+                    if cur_item['type'] == 'pre_encoder':
+                        return False
+                    elif cur_item['type'] == 'main_latent_compressor':
+                        return False
+                    elif cur_item['type'] == 'decoder':
+                        return False
+                    elif cur_item['name'] == cur_model_name:
+                        return False
+            if self.verbose:
+                print(cur_model_type, cur_model_name, 'Passed')
+            return True
+        else:
+            raise TypeError
+
+
+    def setup_optimizer(self):
+        # Filter parameter
+        modules_to_optim = torch.nn.ModuleList()
+        # Scan through all parameters
+        for cur_model_type in self.model.model:
+            if isinstance(self.model.model[cur_model_type], torch.nn.ModuleDict):
+                for cur_model_name in self.model.model[cur_model_type]:
+                    if self.__scan_exclude(cur_model_type, cur_model_name):
+                        modules_to_optim.append(self.model.model[cur_model_type][cur_model_name])
+            elif self.__scan_exclude(cur_model_type):
+                modules_to_optim.append(self.model.model[cur_model_type])
+
+        if self.verbose:
+            print('Filtered parameter list:')
+            print(modules_to_optim)
+
+        # Setup Optimizer
+        if self.config['optimizer']['type'] == 'RMSProp':
+            self.optimizer = torch.optim.RMSprop(modules_to_optim.parameters(),
+                                                 lr=self.config['optimizer']['RMSProp_lr'],
+                                                 alpha=self.config['optimizer']['RMSProp_alpha'],
+                                                 weight_decay=self.config['optimizer'].get('RMSProp_weight_decay', 0),
+                                                 momentum=self.config['optimizer'].get('RMSProp_momentum', 0))
+        else:
+            print("Optimizers other than RMSProp not implemented.")
+            raise NotImplementedError
 
     def print_weight_projection(self, expected_epoch):
         # Initial weights
@@ -413,7 +460,15 @@ class ExtractorController(object):
                 num_projections=regularization_config['SW2_num_projections'],
                 device=self.device
             )
-        elif regularization_config['type'] == 'SW2_gaussian_mixturn_supervised':
+        elif regularization_config['type'] == 'L1_regularization':
+            return torch.linalg.norm(tensor, dim=1, ord=1).mean()
+        elif regularization_config['type'] == 'L2_regularization':
+            return torch.linalg.norm(tensor, dim=1, ord=2).mean()
+        elif regularization_config['type'] == 'L0_regularization':
+            # Not meaningful to use the embedded L-0 norm, it can't generate grad
+            # consider: https://github.com/moskomule/l0.pytorch
+            raise NotImplementedError
+        elif regularization_config['type'] == 'SW2_gaussian_mixture_supervised':
             # TODO: Supervised gaussian mixture prior
             raise NotImplementedError
         elif regularization_config['type'] == 'euclidean_anchor':
@@ -567,9 +622,17 @@ class ExtractorController(object):
                     main_loss['loss'][cur_main_loss_key] = torch.nn.functional.cosine_similarity(fwd_res['x'], fwd_res['re_x'])
                     main_loss['loss'][cur_main_loss_key] = 1.0 - main_loss['loss'][cur_main_loss_key]
                     main_loss['loss'][cur_main_loss_key] = main_loss['loss'][cur_main_loss_key].mean()
+                elif cur_main_loss['type'] == 'L1_norm':
+                    # Calculate L1 norm penalty on reconstructed output
+                    main_loss['loss'][cur_main_loss_key] = torch.linalg.norm(fwd_res['re_x'], dim=1, ord=1).mean()
+                elif cur_main_loss['type'] == 'L2_norm':
+                    # Calculate L2 norm penalty on reconstructed output
+                    main_loss['loss'][cur_main_loss_key] = torch.linalg.norm(fwd_res['re_x'], dim=1, ord=2).mean()
+                elif cur_main_loss['type'] == 'SW2':
+                    # Similar to regularization, but to match the distribution of output vectors to a designated distribution
+                    raise NotImplementedError('SW2 loss on output not implemented yet')
                 else:
-                    print("Unsupported main latent loss type")
-                    raise NotImplementedError
+                    raise NotImplementedError("Unsupported main latent loss type")
                 if save_raw_loss:
                     main_loss['loss_raw'][cur_main_loss_key] = main_loss['loss'][cur_main_loss_key]
                 main_loss['loss'][cur_main_loss_key] = main_loss['loss'][cur_main_loss_key] * self.main_loss_weight['loss'][cur_main_loss_key]
@@ -616,6 +679,7 @@ class ExtractorController(object):
                         cur_pheno_out = self.model.model['pheno_models'][cur_pheno](cur_pheno_lat)
 
                     if cur_pheno_loss['type'] == 'NLL':
+                        # TODO: weighted NLL (to better handle label imbalance)
                         pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0])
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = \
                             torch.nn.functional.nll_loss(cur_pheno_out, pheno_ans)
@@ -633,6 +697,16 @@ class ExtractorController(object):
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = torch.nn.functional.cosine_similarity(cur_pheno_out, pheno_ans)
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = 1.0 - pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key]
                         pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key] = pheno_loss[cur_pheno]['loss'][cur_pheno_loss_key].mean()
+                    elif cur_pheno_loss['type'] == 'BCE':
+                        # Binary cross entropy (to do mask prediction)
+                        # pheno_ans is expected to be a 1-d binary array (or [0,1] prob range)
+                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0], -1)
+                        if cur_pheno_loss['weighted'] == 'True':
+                            # TODO: weighted BCE (to better handle label imbalance)
+                            raise NotImplementedError
+                        else:
+                            torch.nn.functional.binary_cross_entropy(cur_pheno_out, pheno_ans)
+
                     else:
                         print('Unsupported phenotype supervision loss type.')
                         raise ValueError
@@ -654,7 +728,7 @@ class ExtractorController(object):
                         if cur_pheno_reg_loss.get('enable_GNL') == 'True':
                             cur_pheno_lat = NeutralizeLayerF.apply(cur_pheno_lat)
 
-                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0])
+                        pheno_ans = batch['pheno'][cur_pheno].squeeze().reshape(fwd_res['pheno_out'][cur_pheno].shape[0], -1)
                         pheno_loss[cur_pheno]['regularization'][cur_pheno_reg_loss_key] = \
                             self.regularize(tensor=cur_pheno_lat,
                                             regularization_config=self.pheno_config[cur_pheno]['regularization'][
@@ -706,6 +780,18 @@ class ExtractorController(object):
                             torch.nn.functional.cosine_similarity(cur_signature_out, signature_ans)
                         signature_loss[cur_signature]['loss'][cur_signature_loss_key] = 1.0 - signature_loss[cur_signature]['loss'][cur_signature_loss_key]
                         signature_loss[cur_signature]['loss'][cur_signature_loss_key] = signature_loss[cur_signature]['loss'][cur_signature_loss_key].mean()
+                    elif cur_signature_loss['type'] == 'SW2':
+                        # TODO: SW2 loss to align distrubution of signature output to prior distribution
+                        raise NotImplementedError
+                    elif cur_signature_loss['type'] == 'BCE':
+                        # TODO: Weighted BCE loss
+                        signature_loss[cur_signature]['loss'][cur_signature_loss_key] = torch.nn.functional.binary_cross_entropy(cur_signature_out, signature_ans)
+                        print("Debugging BCE")
+                        print("cur_signature_out", cur_signature_out)
+                        print("cur_signature_out.shape", cur_signature_out.shape)
+                        print("signature_ans", signature_ans)
+                        print("signature_ans.shape", signature_ans.shape)
+                        print("signature_loss[cur_signature]['loss'][cur_signature_loss_key]", signature_loss[cur_signature]['loss'][cur_signature_loss_key])
                     else:
                         print('Unsupported signature supervision loss type.')
                         raise ValueError

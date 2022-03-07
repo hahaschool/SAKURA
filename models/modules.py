@@ -27,39 +27,78 @@ def modulebuilder(cfg):
 
 
 class FCDecoder(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_neurons=50, hidden_layers=3, output_activation_function='identity', config=None):
+    def __init__(self, input_dim, output_dim,
+                 hidden_neurons=50, hidden_layers=3,
+                 output_activation_function='identity',
+                 dropout=False,
+                 dropout_input=False, dropout_input_p=0.5,
+                 dropout_hidden=False, dropout_hidden_p=0.5,
+                 config=None):
         super(FCDecoder, self).__init__()
         self.model_list = nn.ModuleList()
         self.config = config
+        self.dropout = dropout
+        self.dropout_input = dropout_input
+        self.dropout_input_p = dropout_input_p
+        self.dropout_hidden = dropout_hidden
+        self.dropout_hidden_p = dropout_hidden_p
+        self.hidden_neurons = hidden_neurons
+        self.hidden_layers = hidden_layers
+        self.input_dim = input_dim
+        self.output_dim = output_dim
         if self.config is None:
             # Default 3 hidden layer structure
             # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> Output
-            # The difference btw FCPreEncoder/FCCompressor is default layers and no CELU activations
-            self.input_dim = input_dim
-            self.output_dim = output_dim
-            self.hidden_neurons = hidden_neurons
-            self.hidden_layers = hidden_layers
+            if dropout and dropout_input:
+                self.model_list.append(nn.Dropout(p=dropout_input_p))
+
             if self.hidden_layers == 1:
                 # Default is 1 layer structure
                 # Input --> Output (latent transformation)
                 self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
             elif self.hidden_layers > 1:
-                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
-                self.model_list.append(nn.CELU())
-
-                # If more than 2 layers requested
-                for i in range(self.hidden_layers - 2):
-                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                if type(hidden_neurons) is int:
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
                     self.model_list.append(nn.CELU())
+                    if dropout and dropout_hidden:
+                        self.model_list.append(nn.Dropout(p=dropout_hidden_p))
 
-                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                        self.model_list.append(nn.CELU())
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
 
-                if output_activation_function == 'relu':
-                    self.model_list.append(nn.ReLU())
-                elif output_activation_function == 'softmax':
-                    self.model_list.append(nn.Softmax())
-                elif output_activation_function != 'identity':
-                    raise NotImplementedError('Unsupported activation function')
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+
+                elif type(hidden_neurons) is list:
+                    cur_hidden_i = 0
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons[cur_hidden_i]))
+                    self.model_list.append(nn.CELU())
+                    cur_hidden_i += 1
+                    if dropout and dropout_hidden:
+                        self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.hidden_neurons[cur_hidden_i]))
+                        self.model_list.append(nn.CELU())
+                        cur_hidden_i += 1
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.output_dim))
+                else:
+                    raise ValueError("Either specify an integer or a list of integers to hidden_neurons.")
+
+            if output_activation_function == 'relu':
+                self.model_list.append(nn.ReLU())
+            elif output_activation_function == 'softmax':
+                self.model_list.append(nn.Softmax())
+            elif output_activation_function != 'identity':
+                raise NotImplementedError('Unsupported activation function')
 
         else:
             self.model_list = modulebuilder(config)
@@ -71,36 +110,78 @@ class FCDecoder(nn.Module):
 
 class FCPreEncoder(nn.Module):
     # Input --> Linear --> CELU --> Linear --> CELU --> Output
-    def __init__(self, input_dim: int, output_dim: int, hidden_neurons: int = 50, hidden_layers: int = 2, config=None):
+    def __init__(self, input_dim: int, output_dim: int,
+                 hidden_neurons=None, hidden_layers=2,
+                 dropout=False,
+                 dropout_input=False, dropout_input_p=0.5,
+                 dropout_hidden=False, dropout_hidden_p=0.5,
+                 config=None):
         super(FCPreEncoder, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.config = config
         self.model_list = nn.ModuleList()
+        self.dropout = dropout
+        self.dropout_input = dropout_input
+        self.dropout_input_p = dropout_input_p
+        self.dropout_hidden = dropout_hidden
+        self.dropout_hidden_p = dropout_hidden_p
+        self.hidden_neurons = hidden_neurons
+        self.hidden_layers = hidden_layers
+
         if config is None:
             # Default 2 hidden layer structure
             # Input --> Linear --> CELU --> Linear --> CELU --> Output (Low-dim compressor expected)
-            self.hidden_neurons = hidden_neurons
-            self.hidden_layers = hidden_layers
-
+            # Dropout input data
+            if dropout and dropout_input:
+                self.model_list.append(nn.Dropout(p=dropout_input_p))
             if self.hidden_layers == 1:
-                # Default is 1 layer structure
+                # 1 layer structure
                 # Input --> Output (latent transformation)
                 self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
                 self.model_list.append(nn.CELU())
             elif self.hidden_layers > 1:
-                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
-                self.model_list.append(nn.CELU())
-
-                # If more than 2 layers requested
-                for i in range(self.hidden_layers - 2):
-                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                if type(hidden_neurons) is int:
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
                     self.model_list.append(nn.CELU())
+                    if dropout and dropout_hidden:
+                        self.model_list.append(nn.Dropout(p=dropout_hidden_p))
 
-                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
-                self.model_list.append(nn.CELU())
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                        self.model_list.append(nn.CELU())
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                    self.model_list.append(nn.CELU())
+                elif type(hidden_neurons) is list:
+                    cur_hidden_i = 0
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons[cur_hidden_i]))
+                    self.model_list.append(nn.CELU())
+                    cur_hidden_i += 1
+                    if dropout and dropout_hidden:
+                        self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.hidden_neurons[cur_hidden_i]))
+                        self.model_list.append(nn.CELU())
+                        cur_hidden_i += 1
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.output_dim))
+                    self.model_list.append(nn.CELU())
+                else:
+                    raise ValueError("[FCPreEncoder] Either specify an integer or a list of integers to hidden_neurons.")
+
             else:
-                raise ValueError("The number of hidden layer of FCCompressor should be 1, or larger than 1")
+                raise ValueError("[FCPreEncoder] The number of hidden layer of FCCompressor should be 1, or larger than 1")
         else:
             self.model_list = modulebuilder(self.config)
     def forward(self, x):
@@ -108,35 +189,69 @@ class FCPreEncoder(nn.Module):
             x = cur_model(x)
         return x
 
+
 class FCCompressor(nn.Module):
     """
     Simply used to compress outputs from pre-encoder to a lower dimension
     """
 
-    def __init__(self, input_dim: int, output_dim: int, hidden_neurons: int = 50, hidden_layers: int = 1, config=None):
+    def __init__(self, input_dim: int, output_dim: int,
+                 hidden_neurons: int = 50, hidden_layers: int = 1,
+                 dropout=False,
+                 dropout_input=False, dropout_input_p=0.5,
+                 dropout_hidden=False, dropout_hidden_p=0.5,
+                 config=None):
         super(FCCompressor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.config = config
         self.model_list = nn.ModuleList()
+        self.dropout = dropout
+        self.dropout_input = dropout_input
+        self.dropout_input_p = dropout_input_p
+        self.dropout_hidden = dropout_hidden
+        self.dropout_hidden_p = dropout_hidden_p
+        self.hidden_neurons = hidden_neurons
+        self.hidden_layers = hidden_layers
         if self.config is None:
-            self.hidden_neurons = hidden_neurons
-            self.hidden_layers = hidden_layers
-
             if self.hidden_layers == 1:
                 # Default is 1 layer structure
                 # Input --> Output (latent transformation)
                 self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
-            elif self.hidden_layers > 1:
-                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
                 self.model_list.append(nn.CELU())
-
-                # If more than 2 layers requested
-                for i in range(self.hidden_layers - 2):
-                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+            elif self.hidden_layers > 1:
+                if type(hidden_neurons) is int:
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
                     self.model_list.append(nn.CELU())
 
-                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                        self.model_list.append(nn.CELU())
+
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                    self.model_list.append(nn.CELU())
+                elif type(hidden_neurons) is list:
+                    cur_hidden_i = 0
+                    self.model_list.append(
+                        nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons[cur_hidden_i]))
+                    self.model_list.append(nn.CELU())
+                    cur_hidden_i += 1
+
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.hidden_neurons[cur_hidden_i]))
+                        self.model_list.append(nn.CELU())
+                        cur_hidden_i += 1
+
+                    self.model_list.append(
+                        nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.output_dim))
+                    self.model_list.append(nn.CELU())
+                else:
+                    raise ValueError("Either specify an integer or a list of integers to hidden_neurons.")
+
             else:
                 raise ValueError("The number of hidden layer of FCCompressor should be 1, or larger than 1")
         else:
@@ -156,7 +271,7 @@ class FCClassifier(nn.Module):
     """
 
     def __init__(self, input_dim, output_dim,
-                 hidden_neurons=5,
+                 hidden_neurons=5, hidden_layers=None,
                  dropout=False,
                  dropout_input=False, dropout_input_p=0.5,
                  dropout_hidden=False, dropout_hidden_p=0.5,
@@ -166,32 +281,85 @@ class FCClassifier(nn.Module):
         self.output_dim = output_dim
         self.config = config
         self.hidden_neurons = hidden_neurons
+        self.hidden_layers = hidden_layers
+        self.dropout = dropout
         self.dropout_input = dropout_input
         self.dropout_input_p = dropout_input_p
         self.dropout_hidden = dropout_hidden
         self.dropout_hidden_p = dropout_hidden_p
         self.model_list = nn.ModuleList()
         if self.config is None:
-            # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> LogSoftmax --> Output
+            if hidden_layers is None:
+                # Legacy mode:
+                # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> LogSoftmax --> Output
+                # Dropout input data
+                if dropout and dropout_input:
+                    self.model_list.append(nn.Dropout(p=dropout_input_p))
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
 
-            # Dropout input data
-            if dropout and dropout_input:
-                self.model_list.append(nn.Dropout(p=dropout_input_p))
-            self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
+                # Dropout hidden layer activations
+                if dropout and dropout_hidden:
+                    self.model_list.append(nn.Dropout(p=dropout_hidden_p))
 
-            # Dropout hidden layer activations
-            if dropout and dropout_hidden:
-                self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
 
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
+                # Dropout hidden layer activations
+                if dropout and dropout_hidden:
+                    self.model_list.append(nn.Dropout(p=dropout_hidden_p))
 
-            # Dropout hidden layer activations
-            if dropout and dropout_hidden:
-                self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+            elif type(hidden_layers) is int:
+                # Dropout input data
+                if dropout and dropout_input:
+                    self.model_list.append(nn.Dropout(p=dropout_input_p))
 
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                if hidden_layers == 1:
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+                else:
+                    if type(self.hidden_neurons) is int:
+                        # Backcompat, fixed number of hidden neurons
+                        self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                        self.model_list.append(nn.CELU())
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                        # If more than 2 layers requested
+                        for i in range(self.hidden_layers - 2):
+                            self.model_list.append(
+                                nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                            self.model_list.append(nn.CELU())
+                            if dropout and dropout_hidden:
+                                self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                        self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                    elif type(self.hidden_neurons) is list:
+                        cur_hidden_i = 0
+                        self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons[cur_hidden_i]))
+                        self.model_list.append(nn.CELU())
+                        cur_hidden_i += 1
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                        # If more than 2 layers requested
+                        for i in range(self.hidden_layers - 2):
+                            self.model_list.append(
+                                nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.hidden_neurons[cur_hidden_i]))
+                            self.model_list.append(nn.CELU())
+                            cur_hidden_i += 1
+                            if dropout and dropout_hidden:
+                                self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.output_dim))
+                    else:
+                        raise ValueError(
+                            '[FCClassifier] hidden_neurons should be int for legacy, fixed hidden mode, or list of int for flex mode')
+            else:
+                raise ValueError('[FCClassifier] hidden_layers should be None for legacy mode, or int for flex mode')
+
+            # For classifier, the activation function of output layer is always Logsoftmax
             self.model_list.append(nn.LogSoftmax(dim=1))
         else:
             self.model_list = modulebuilder(self.config)
@@ -202,30 +370,128 @@ class FCClassifier(nn.Module):
             x = cur_model(x)
         return x
 
+class GeneralFCLayer(nn.Module):
+    def __init__(self, input_dim, output_dim,
+                 hidden_layers=None, hidden_neurons=None,
+                 hidden_activation_function='CELU',
+                 output_activation_function='identity',
+                 dropout=False,
+                 dropout_input=False, dropout_input_p=0.5,
+                 dropout_hidden=False, dropout_hidden_p=0.5):
+
+        super(GeneralFCLayer, self).__init__()
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_layers = hidden_layers
+        self.hidden_neurons = hidden_neurons
+        self.hidden_activation_function = hidden_activation_function
+        self.output_activation_function = output_activation_function
+        self.dropout = dropout
+        self.dropout_input = dropout_input
+        self.dropout_input_p = dropout_input_p
+        self.dropout_hidden = dropout_hidden
+        self.dropout_hidden_p = dropout_hidden_p
+
+        # TODO: impl a generalized FC layer and replace current modules with the general version
+
+        raise NotImplementedError
+
+
 class FCRegressor(nn.Module):
     """
     Model used for supervising expression levels for selected genes
     Use entire latent space as input, or designated dimension(s)
     """
 
-    def __init__(self, input_dim, output_dim, config=None, hidden_neurons=5, output_activation_function='identity'):
+    def __init__(self, input_dim, output_dim, config=None,
+                 hidden_neurons=5, hidden_layers=None,
+                 output_activation_function='identity',
+                 dropout=False,
+                 dropout_input=False, dropout_input_p=0.5,
+                 dropout_hidden=False, dropout_hidden_p=0.5):
         super(FCRegressor, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.config = config
         self.model_list = nn.ModuleList()
+        self.hidden_neurons = hidden_neurons
+        self.hidden_layers = hidden_layers
+        self.dropout = dropout
+        self.dropout_input = dropout_input
+        self.dropout_input_p = dropout_input_p
+        self.dropout_hidden = dropout_hidden
+        self.dropout_hidden_p = dropout_hidden_p
         if self.config is None:
-            # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> ReLU --> Output
-            self.hidden_neurons = hidden_neurons
-            self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
-            self.model_list.append(nn.CELU())
-            self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+            if hidden_layers is None:
+                # Legacy model
+                # Input --> Linear --> CELU --> Linear --> CELU --> Linear --> ReLU --> Output
+                if dropout and dropout_input:
+                    self.model_list.append(nn.Dropout(p=dropout_input_p))
+
+                self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
+                if dropout and dropout_hidden:
+                    self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                self.model_list.append(nn.CELU())
+                if dropout and dropout_hidden:
+                    self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+            elif type(hidden_layers) is int:
+
+                # Dropout input data
+                if dropout and dropout_input:
+                    self.model_list.append(nn.Dropout(p=dropout_input_p))
+
+                if hidden_layers == 1:
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.output_dim))
+
+                elif type(hidden_neurons) is int:
+                    self.model_list.append(nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons))
+                    self.model_list.append(nn.CELU())
+                    if dropout and dropout_hidden:
+                        self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons, out_features=self.hidden_neurons))
+                        self.model_list.append(nn.CELU())
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    self.model_list.append(nn.Linear(in_features=self.hidden_neurons, out_features=self.output_dim))
+                elif type(hidden_neurons) is list:
+                    cur_hidden_i = 0
+                    self.model_list.append(
+                        nn.Linear(in_features=self.input_dim, out_features=self.hidden_neurons[cur_hidden_i]))
+                    self.model_list.append(nn.CELU())
+                    cur_hidden_i += 1
+                    if dropout and dropout_hidden:
+                        self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    # If more than 2 layers requested
+                    for i in range(self.hidden_layers - 2):
+                        self.model_list.append(
+                            nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.hidden_neurons[cur_hidden_i]))
+                        self.model_list.append(nn.CELU())
+                        cur_hidden_i += 1
+                        if dropout and dropout_hidden:
+                            self.model_list.append(nn.Dropout(p=dropout_hidden_p))
+
+                    self.model_list.append(
+                        nn.Linear(in_features=self.hidden_neurons[cur_hidden_i-1], out_features=self.output_dim))
+            else:
+                raise ValueError('[FCRegressor] hidden_layers should be None for legacy mode, or int for flex mode')
             if output_activation_function == 'relu':
                 self.model_list.append(nn.ReLU())
             elif output_activation_function == 'softmax':
                 self.model_list.append(nn.Softmax())
+            elif output_activation_function == 'sigmoid':
+                self.model_list.append(nn.Sigmoid())
             elif output_activation_function != 'identity':
                 raise NotImplementedError('Unsupported activation function')
         else:

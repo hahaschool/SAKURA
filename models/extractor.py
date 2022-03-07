@@ -43,7 +43,12 @@ class Extractor(torch.nn.Module):
             pre_encoder = model.FCPreEncoder(input_dim=self.input_dim,
                                              output_dim=self.encoder_neurons,
                                              hidden_neurons=self.pre_encoder_config.get('hidden_neurons'),
-                                             hidden_layers=self.pre_encoder_config.get('hidden_layers'))
+                                             hidden_layers=self.pre_encoder_config.get('hidden_layers'),
+                                             dropout=(self.pre_encoder_config.get('dropout') == 'True'),
+                                             dropout_input=(self.pre_encoder_config.get('dropout_input') == 'True'),
+                                             dropout_input_p=self.pre_encoder_config.get('dropout_input_p', 0.5),
+                                             dropout_hidden=(self.pre_encoder_config.get('dropout_hidden') == 'True'),
+                                             dropout_hidden_p=self.pre_encoder_config.get('dropout_hidden_p', 0.5))
         # Main Latent Compressor
         if main_lat_config.get('encoder_config') is None:
             # Back compatibility (legacy mode)
@@ -53,7 +58,12 @@ class Extractor(torch.nn.Module):
             main_latent_compressor = model.FCCompressor(input_dim=self.encoder_neurons,
                                                         output_dim=self.main_latent_dim,
                                                         hidden_neurons=main_lat_config['encoder_config'].get('hidden_neurons'),
-                                                        hidden_layers=main_lat_config['encoder_config'].get('hidden_layers'))
+                                                        hidden_layers=main_lat_config['encoder_config'].get('hidden_layers'),
+                                                        dropout=(main_lat_config['encoder_config'].get('dropout') == 'True'),
+                                                        dropout_input=(main_lat_config['encoder_config'].get('dropout_input') == 'True'),
+                                                        dropout_input_p=main_lat_config['encoder_config'].get('dropout_input_p',0.5),
+                                                        dropout_hidden=(main_lat_config['encoder_config'].get('dropout_hidden') == 'True'),
+                                                        dropout_hidden_p=main_lat_config['encoder_config'].get('dropout_hidden_p', 0.5))
 
         # Signature Latent Compressor
         total_latent_dim = self.main_latent_dim
@@ -81,6 +91,9 @@ class Extractor(torch.nn.Module):
         if self.signature_config is not None:
             for cur_signature in self.signature_config.keys():
                 model_details = self.signature_config[cur_signature].get('model')
+                if self.verbose:
+                    print("Building phenotype module: ", cur_signature)
+                    print("Model details: ", model_details)
                 if model_details is None:
                     # Legacy: by default, use a linear regressor
                     signature_regressors[cur_signature] = model.LinRegressor(
@@ -94,7 +107,13 @@ class Extractor(torch.nn.Module):
                             input_dim=self.signature_config[cur_signature]['signature_lat_dim'],
                             output_dim=self.signature_config[cur_signature]['signature_out_dim'],
                             hidden_neurons=model_details.get('hidden_neurons', 5),
-                            output_activation_function=model_details.get('output_activation_function', 'identity')
+                            hidden_layers=model_details.get('hidden_layers'),
+                            output_activation_function=model_details.get('output_activation_function', 'identity'),
+                            dropout=(model_details.get('dropout') == 'True'),
+                            dropout_input=(model_details.get('dropout_input') == 'True'),
+                            dropout_input_p=model_details.get('dropout_input_p', 0.5),
+                            dropout_hidden=(model_details.get('dropout_hidden') == 'True'),
+                            dropout_hidden_p=model_details.get('dropout_hidden_p', 0.5)
                         )
                     elif model_details['type'] == 'LinRegressor':
                         signature_regressors[cur_signature] = model.LinRegressor(
@@ -131,6 +150,9 @@ class Extractor(torch.nn.Module):
         if self.pheno_config is not None:
             for cur_pheno in self.pheno_config.keys():
                 model_details = self.pheno_config[cur_pheno].get('model')
+                if self.verbose:
+                    print("Building phenotype module: ", cur_pheno)
+                    print("Model details: ", model_details)
                 if model_details is None:
                     # Legacy: by default, use a linear classifier
                     pheno_models[cur_pheno] = model.LinClassifier(
@@ -148,6 +170,7 @@ class Extractor(torch.nn.Module):
                             input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
                             output_dim=self.pheno_config[cur_pheno]['pheno_out_dim'],
                             hidden_neurons=model_details.get('hidden_neurons', 5),
+                            hidden_layers=model_details.get('hidden_layers'),
                             dropout=(model_details.get('dropout') == 'True'),
                             dropout_input=(model_details.get('dropout_input') == 'True'),
                             dropout_input_p=model_details.get('dropout_input_p', 0.5),
@@ -158,7 +181,13 @@ class Extractor(torch.nn.Module):
                         pheno_models[cur_pheno] = model.FCRegressor(
                             input_dim=self.pheno_config[cur_pheno]['pheno_lat_dim'],
                             output_dim=self.pheno_config[cur_pheno]['pheno_out_dim'],
-                            hidden_neurons=model_details.get('hidden_neurons', 5)
+                            hidden_neurons=model_details.get('hidden_neurons', 5),
+                            hidden_layers=model_details.get('hidden_layers'),
+                            dropout=(model_details.get('dropout') == 'True'),
+                            dropout_input=(model_details.get('dropout_input') == 'True'),
+                            dropout_input_p=model_details.get('dropout_input_p', 0.5),
+                            dropout_hidden=(model_details.get('dropout_hidden') == 'True'),
+                            dropout_hidden_p=model_details.get('dropout_hidden_p', 0.5)
                         )
                     elif model_details['type'] == 'LinRegressor':
                         pheno_models[cur_pheno] = model.LinRegressor(
@@ -181,7 +210,12 @@ class Extractor(torch.nn.Module):
                                       output_dim=self.input_dim,
                                       hidden_neurons=main_lat_config['decoder_config'].get('hidden_neurons'),
                                       hidden_layers=main_lat_config['decoder_config'].get('hidden_layers'),
-                                      output_activation_function=main_lat_config['decoder_config'].get('output_activation_function'))
+                                      output_activation_function=main_lat_config['decoder_config'].get('output_activation_function'),
+                                      dropout=(main_lat_config['decoder_config'].get('dropout') == 'True'),
+                                      dropout_input=(main_lat_config['decoder_config'].get('dropout_input') == 'True'),
+                                      dropout_input_p=main_lat_config['decoder_config'].get('dropout_input_p', 0.5),
+                                      dropout_hidden=(main_lat_config['decoder_config'].get('dropout_hidden') == 'True'),
+                                      dropout_hidden_p=main_lat_config['decoder_config'].get('dropout_hidden_p', 0.5))
 
         # Assemble model
         self.model = torch.nn.ModuleDict({

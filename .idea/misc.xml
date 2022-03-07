@@ -3,7 +3,7 @@
   <component name="JavaScriptSettings">
     <option name="languageLevel" value="ES6" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.8 (dm)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.9 (dm)" project-jdk-type="Python SDK" />
   <component name="PyPackaging">
     <option name="earlyReleasesAsUpgrades" value="true" />
   </component>
@@ -1941,6 +1941,13 @@
             </RMarkdownRenderProfile>
           </value>
         </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_extralog1p/inspect_activation.Rmd.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_extralog1p" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
         <entry key="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_lognorm_unsupervised_plus1/inspect_activation.Rmd.rmd">
           <value>
             <RMarkdownRenderProfile>
@@ -1952,6 +1959,48 @@
           <value>
             <RMarkdownRenderProfile>
               <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC02_CMN_RNA_RNA_unsupervised" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC03_CMN_RNA_RNA_lognorm_unsupervised_binarypred_onegrp/inspect_activation.Rmd.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC03_CMN_RNA_RNA_lognorm_unsupervised_binarypred_onegrp" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC04_CMN_RNA_RNA_lognorm_unsupervised_FOEM_allgenes/B/inspect_activation.Rmd.rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC04_CMN_RNA_RNA_lognorm_unsupervised_FOEM_allgenes/B" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC07_CMN_P2_RNAADT_RNAADT_batchGRL_0.001_5_celltype_0.001_1_phase_0.001_1_pseudotime_0.001_1_FC500500500_FC200200200_100d_nodropout_withcontrols/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC07_CMN_P2_RNAADT_RNAADT_batchGRL_0.001_5_celltype_0.001_1_phase_0.001_1_pseudotime_0.001_1_FC500500500_FC200200200_100d_nodropout_withcontrols" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC07_CMN_P2_RNAADT_RNAADT_batchGRL_0.01_5_celltype_0.001_1_phase_0_0_pseudotime_0.001_1_FC500500500_FC200200200_100d_nodropout_withcontrols_withreg/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC07_CMN_P2_RNAADT_RNAADT_batchGRL_0.01_5_celltype_0.001_1_phase_0_0_pseudotime_0.001_1_FC500500500_FC200200200_100d_nodropout_withcontrols_withreg" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC07_CMN_nP2_RNAADT_RNAADT_batchGRL_permajor_0.01_5_celltype_0.001_1_phase_0_0_pseudotime_0.001_1_FC500500_FC200200_100d_nodropout_withcontrols_withreg/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC07_CMN_nP2_RNAADT_RNAADT_batchGRL_permajor_0.01_5_celltype_0.001_1_phase_0_0_pseudotime_0.001_1_FC500500_FC200200_100d_nodropout_withcontrols_withreg" />
+            </RMarkdownRenderProfile>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/runs/MOC07_CMN_nP2_RNAADT_RNAADT_batchGRL_permajor_0.01_5_celltype_0_0_phasescore_0_0_pseudotime_0_0_FC500500_FC200200_100d_nodropout_withcontrols_withreg_addedsupervision/makeplots.Rmd">
+          <value>
+            <RMarkdownRenderProfile>
+              <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$/runs/MOC07_CMN_nP2_RNAADT_RNAADT_batchGRL_permajor_0.01_5_celltype_0_0_phasescore_0_0_pseudotime_0_0_FC500500_FC200200_100d_nodropout_withcontrols_withreg_addedsupervision" />
             </RMarkdownRenderProfile>
           </value>
         </entry>

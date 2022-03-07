@@ -21,6 +21,8 @@ class Logger(object):
         if not suppress_tensorboardX:
             self.log_writer = tensorboardX.SummaryWriter(self.log_path)
 
+
+
     def log_loss(self, trainer_output: dict, tick,
                  loss_name_prefix='',
                  selected_loss_group=['loss', 'regularization']):

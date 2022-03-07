@@ -2,8 +2,10 @@ import argparse
 import json
 import os
 import pickle
+import pprint
 import random
 import warnings
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -11,6 +13,8 @@ import torch.backends.cudnn
 import torch.cuda
 import torch.optim
 import torch.utils.data
+import torch.multiprocessing
+from copy import deepcopy
 
 from dataset import rna_count
 from dataset import rna_count_sparse
@@ -18,6 +22,8 @@ from model_controllers.extractor_controller import ExtractorController
 from models.extractor import Extractor
 from utils.data_splitter import DataSplitter
 from utils.logger import Logger
+
+from loguru import logger
 
 
 def parse_args():
@@ -29,6 +35,8 @@ def parse_args():
     parser.add_argument('-i', '--inference', type=str, default='', help='perform inference from saved checkpoint file containing models')
     parser.add_argument('-y', '--inference_story', type=str, default='./inference.json', help='story file of inference')
     parser.add_argument('-x', '--suppress_tensorboardX', type=bool, default=False, help='suppress Logger to initiate tensorboardX (to prevent flushing logs)')
+    parser.add_argument('-e', '--external_module', type=bool, default=False, help='insert modules from external (pretrained) models')
+    parser.add_argument('-E', '--external_module_path', type=str, default='./insert_config.json', help='path of external model config')
     return parser.parse_args()
 
 
@@ -57,7 +65,8 @@ class SAKRA(object):
         if self.config['reproducible'] == 'True':
             self.rnd_seed = int(self.config['rnd_seed'])
             # When seed is set, turn on deterministic mode
-            print("Reproducibe seed:", self.rnd_seed)
+            logger.info("Reproducibe seed: {}", self.rnd_seed)
+
             torch.manual_seed(self.rnd_seed)
             np.random.seed(self.rnd_seed)
             random.seed(self.rnd_seed)
@@ -78,7 +87,7 @@ class SAKRA(object):
         # Get actual gene count (input dimension)
         input_genes = self.count_data[0]['expr']['all'].shape[1]
         if self.verbose:
-            print('Input gene number for building model:', input_genes)
+            logger.debug('Input gene number for building model: {}', input_genes)
 
         # Setup model
         self.model = Extractor(input_dim=input_genes,
@@ -226,10 +235,9 @@ class SAKRA(object):
             for cur_split_key in ext_splits.keys():
                 self.splits[cur_split_key] = ext_splits[cur_split_key]
             if self.verbose:
-                print('=================')
-                print("Imported external splits from", self.config.get('manual_split_pkl_path'))
-                print("External splits:", ext_splits)
-                print("Merged splits:", self.splits)
+                logger.debug("Imported external splits from {}", self.config.get('manual_split_pkl_path'))
+                logger.debug("External splits: {}", ext_splits)
+                logger.debug("Merged splits: {}", self.splits)
 
         ## Overall train/test split
         if self.config['overall_train_test_split']['type'] == 'auto':
@@ -246,7 +254,7 @@ class SAKRA(object):
         elif self.config['overall_train_test_split']['type'] == 'none':
             # Do nothing
             if self.verbose:
-                print('Skipped main splits')
+                logger.debug('Skipped main splits')
         else:
             raise NotImplementedError
 
@@ -272,7 +280,7 @@ class SAKRA(object):
                 elif self.count_data.pheno_meta[cur_pheno]['split']['type'] == 'none':
                     # Do nothing
                     if self.verbose:
-                        print('Skipped pheno splits for:', cur_pheno)
+                        logger.debug('Skipped pheno splits for: {}', cur_pheno)
                 else:
                     raise NotImplementedError
 
@@ -298,15 +306,13 @@ class SAKRA(object):
                 elif self.signature_config[cur_signature]['split']['type'] == 'none':
                     # Do nothing
                     if self.verbose:
-                        print('Skipped signature splits for:', cur_signature)
+                        logger.debug('Skipped signature splits for: {}', cur_signature)
                 else:
                     raise NotImplementedError
 
         ## Print splits for debugging (in verbose mode)
         if self.verbose:
-            print('==========================')
-            print('Splits:')
-            print(self.splits)
+            logger.debug('Splits: {}', self.splits)
 
     def integrity_check(self):
         pheno_meta = self.count_data.pheno_meta
@@ -376,9 +382,7 @@ class SAKRA(object):
             warnings.warn("Genes in signature sets not exist in the dataset:" + str(problematic_signatures))
             ret = False
 
-        if self.verbose:
-            print('==========================')
-            print("Configuration integrity pre-check ok:", ret)
+        logger.info("Configuration integrity pre-check: {}", ret)
         return ret
 
     def train(self,
@@ -508,7 +512,7 @@ class SAKRA(object):
 
                 # Verbose logging
                 if self.verbose:
-                    print(cur_batch['cell_key'][:10])
+                    logger.debug("cur_batch['cell_key'][:10]: {}", cur_batch['cell_key'][:10])
 
                 # Make logs
                 if make_logs:
@@ -661,6 +665,38 @@ class SAKRA(object):
                                            )
 
 
+    def __lint_split_configs(self, split_configs):
+        # Lint split_configs
+        for cur_split_key in split_configs.keys():
+            if split_configs[cur_split_key]['train_pheno'] == 'True':
+                if split_configs[cur_split_key].get('selected_pheno') is None:
+                    split_configs[cur_split_key]['selected_pheno'] = {idx: {'loss': '*', 'regularization': '*'} for idx
+                                                                      in self.selected_pheno}
+                    warnings.warn(
+                        "(To silence, specify phenotype selection explicitly in the config file.) Selecting all included phenotypes and linked losses and regularizations:" + str(
+                            split_configs[cur_split_key]['selected_pheno']))
+            else:
+                if split_configs[cur_split_key].get('selected_pheno') is not None:
+                    raise ValueError(
+                        "Inconsistent training specification, specified phenotype to include in training but surpressed phenotype training.")
+
+            if split_configs[cur_split_key]['train_signature'] == 'True':
+                if split_configs[cur_split_key].get('selected_signature') is None:
+                    split_configs[cur_split_key]['selected_signature'] = {idx: {'loss': '*', 'regularization': '*'} for
+                                                                          idx in self.selected_signature}
+                    warnings.warn(
+                        "(To silence, specify signature selection explicitly in the config file.) Selecting all included signatures and linked losses and regularizations: " + str(
+                            split_configs[cur_split_key]['selected_signature']))
+            else:
+                if split_configs[cur_split_key].get('selected_signature') is not None:
+                    raise ValueError(
+                        "Inconsistent training specification, specified signature to include in training but surpressed signature training.")
+            if split_configs[cur_split_key].get('batch_size') is None:
+                warnings.warn(
+                    "(To slience, specify batch_size explicitly in the config file.) Using default batch_size 50.")
+                split_configs[cur_split_key]['batch_size'] = 50
+            return split_configs
+
     def train_hybrid(self, split_configs: dict, ticks=50000,
                      hybrid_mode='interleave',
                      prog_loss_weight_mode='epoch_end',
@@ -686,33 +722,7 @@ class SAKRA(object):
         :param loss_prog_on_test:
         :return:
         """
-        # Lint split_configs
-        for cur_split_key in split_configs.keys():
-            if split_configs[cur_split_key]['train_pheno'] == 'True':
-                if split_configs[cur_split_key].get('selected_pheno') is None:
-                    split_configs[cur_split_key]['selected_pheno'] = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_pheno}
-                    warnings.warn(
-                        "(To silence, specify phenotype selection explicitly in the config file.) Selecting all included phenotypes and linked losses and regularizations:" + str(
-                            split_configs[cur_split_key]['selected_pheno']))
-            else:
-                if split_configs[cur_split_key].get('selected_pheno') is not None:
-                    raise ValueError(
-                        "Inconsistent training specification, specified phenotype to include in training but surpressed phenotype training.")
-
-            if split_configs[cur_split_key]['train_signature'] == 'True':
-                if split_configs[cur_split_key].get('selected_signature') is None:
-                    split_configs[cur_split_key]['selected_signature'] = {idx: {'loss': '*', 'regularization': '*'} for idx in self.selected_signature}
-                    warnings.warn(
-                        "(To silence, specify signature selection explicitly in the config file.) Selecting all included signatures and linked losses and regularizations: " + str(
-                            split_configs[cur_split_key]['selected_signature']))
-            else:
-                if split_configs[cur_split_key].get('selected_signature') is not None:
-                    raise ValueError(
-                        "Inconsistent training specification, specified signature to include in training but surpressed signature training.")
-            if split_configs[cur_split_key].get('batch_size') is None:
-                warnings.warn(
-                    "(To slience, specify batch_size explicitly in the config file.) Using default batch_size 50.")
-                split_configs[cur_split_key]['batch_size'] = 50
+        split_configs = self.__lint_split_configs(split_configs)
 
         # Resume flag
         to_resume_flag = resume
@@ -768,8 +778,8 @@ class SAKRA(object):
                 cur_split_key = list(split_configs.keys())[cur_split_idx]
 
                 if self.verbose:
-                    print("Hybrid tick", cur_tick, ":", cur_split_key)
-                    print(split_idx_idx)
+                    logger.debug("Hybrid tick {}: {}", cur_tick, cur_split_key)
+                    logger.debug("split_idx_idx: {}", split_idx_idx)
 
                 # Make batch and maintain iterator
                 if split_idx_idx[cur_split_key] >= len(split_iters[cur_split_key]):
@@ -781,7 +791,7 @@ class SAKRA(object):
 
                     # Verbose logging
                     if self.verbose:
-                        print(cur_split_key, "reached the end out epoch.")
+                        logger.debug('{} reached the end out epoch.', cur_split_key)
 
                     # Progress epoch
                     if prog_loss_weight_mode == 'epoch_end':
@@ -795,7 +805,7 @@ class SAKRA(object):
                 cur_batch = self.count_data[cur_idx]
 
                 if self.verbose:
-                    print(cur_batch['cell_key'][:10])
+                    logger.debug("cur_batch['cell_key'][:10]: {}", cur_batch['cell_key'][:10])
 
                 # Train
                 controller_ret = self.controller.train(batch=cur_batch,
@@ -874,7 +884,7 @@ class SAKRA(object):
             while cur_tick < ticks:
                 # Verbose loggings
                 if self.verbose:
-                    print("Hybrid tick", cur_tick, ": summing loss from", list(split_configs.keys()))
+                    logger.debug("Hybrid tick {}: summing loss from {}", cur_tick, list(split_configs.keys()))
 
                 # Tensor for collecting all losses
                 cur_losses = dict()
@@ -893,7 +903,7 @@ class SAKRA(object):
 
                         # Verbose logging
                         if self.verbose:
-                            print(cur_split_key, "reached the end out epoch.")
+                            logger.debug("{} reached the end out epoch.", cur_split_key)
 
                         # Progress epoch
                         if prog_loss_weight_mode == 'epoch_end':
@@ -907,8 +917,8 @@ class SAKRA(object):
                     cur_batch = self.count_data[cur_idx]
 
                     if self.verbose:
-                        print("Split:", cur_split_key)
-                        print(cur_batch['cell_key'][:10])
+                        logger.debug("Split: {}", cur_split_key)
+                        logger.debug("cur_batch['cell_key'][:10]: {}", cur_batch['cell_key'][:10])
 
                     # Obtain loss
                     cur_losses[cur_split_key] = self.controller.train(batch=cur_batch,
@@ -978,13 +988,204 @@ class SAKRA(object):
                                          checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(cur_tick) + '.pth',
                                          save_model_arch=checkpoint_save_arch)
 
-    def train_hybrid_fastload(self):
+    def train_hybrid_fastload(self, split_configs: dict, ticks=50000,
+                             hybrid_mode='interleave',
+                             prog_loss_weight_mode='epoch_end',
+                             make_logs=True, log_prefix='', log_loss_groups=['loss', 'regularization'], save_raw_loss=False,
+                             perform_test=False, test_segmant=2000, tests: dict = None,
+                             perform_checkpoint=False, checkpoint_segment=2000, checkpoint_prefix='', checkpoint_save_arch=False,
+                             loss_prog_on_test: dict = None,
+                             resume=False, resume_dict=None,
+                             prefetch_strategy='reuse', reuse_factor=8, reuse_shuffle_when_reassign=False):
         """
         Will implement the multithread dataloader version of training flowcontrol with storyline.
 
         :return:
         """
-        raise NotImplementedError
+        logger.info("Using multi-task dataloader")
+
+        split_configs = self.__lint_split_configs(split_configs)
+
+        # Resume flag
+        to_resume_flag = resume
+
+        # Setup splits
+        split_masks = dict()  # Masks for each splits
+        split_dataloaders = dict()  # Samplers
+        split_iters = dict()  # Dictionary of actual indices (persisted as list to support resume)
+        split_idx_idx = dict()  # Index of index for each split
+
+        if resume and to_resume_flag:
+            raise NotImplementedError('Resuming for fast dataload training is not implemented yet.')
+        else:
+            # Normally, idx_idx will reset to 0, all samplers start from new
+            for cur_split_key in split_configs.keys():
+                split_idx_idx[cur_split_key] = 0
+                split_masks[cur_split_key] = self.splits[split_configs[cur_split_key]['use_split']]
+
+                split_dataloaders[cur_split_key] = torch.utils.data.DataLoader(
+                    dataset=self.count_data,
+                    batch_size=split_configs[cur_split_key].get('batch_size', 50),
+                    sampler=torch.utils.data.SubsetRandomSampler(
+                        np.arange(len(self.count_data))[split_masks[cur_split_key]]
+                    ),
+                    drop_last=True, # Drop last is enabled here to prevent possible type conversion errors produced by the trialing dust batch
+                    num_workers=split_configs[cur_split_key].get('dataloader_num_workers', 20),
+                    collate_fn=self.count_data.collate_fn,
+                    pin_memory=False,
+                    persistent_workers=True,
+                    prefetch_factor=2
+                )
+
+        prefetch_iters = dict()
+        logger.info("Prefetching batches")
+        if prefetch_strategy == 'reuse':
+            init_prefetch_multiplier = reuse_factor
+            # Generate and persist batches
+            for cur_split_key in split_configs.keys():
+                prefetch_iters[cur_split_key] = dict()
+                for cur_prefetch_round in range(init_prefetch_multiplier):
+                    prefetch_iters[cur_split_key][cur_prefetch_round] = list()
+                    if self.verbose:
+                        logger.debug('Prefetching batches for split: {}, round {}', cur_split_key, cur_prefetch_round)
+                    for cur_i, cur_batch in enumerate(tqdm(split_dataloaders[cur_split_key])):
+                        prefetch_iters[cur_split_key][cur_prefetch_round].append(deepcopy(cur_batch))
+                    split_idx_idx[cur_split_key] = 0
+                split_iters[cur_split_key] = prefetch_iters[cur_split_key][0]
+        elif prefetch_strategy == 'fresh':
+            for cur_split_key in split_configs.keys():
+                split_iters[cur_split_key] = list()
+                if self.verbose:
+                    logger.debug('Prefetching batches for split: {}', cur_split_key)
+                for cur_i, cur_batch in enumerate(tqdm(split_dataloaders[cur_split_key])):
+                    split_iters[cur_split_key].append(deepcopy(cur_batch))
+                split_idx_idx[cur_split_key] = 0
+        logger.success("Prefetched batches")
+
+        if hybrid_mode == 'interleave':
+            # Round robin all given splits one by one
+            cur_split_idx = 0
+            cur_tick = 0
+
+            # Handle resume
+            if resume and to_resume_flag:
+                raise NotImplementedError('Resuming for fast dataload training is not implemented yet.')
+
+            while cur_tick < ticks:
+
+                # Turn dataset to key-only mode to make batch generation faster
+                self.count_data.mode = 'key'
+
+                # Select split
+                if cur_split_idx >= len(split_configs):
+                    cur_split_idx = 0
+                cur_split_key = list(split_configs.keys())[cur_split_idx]
+
+                if self.verbose:
+                    logger.debug("Hybrid tick {}: {}", cur_tick, cur_split_key)
+                    logger.debug("split_idx_idx {}", split_idx_idx)
+
+                # Make batch and maintain iterator
+                if split_idx_idx[cur_split_key] >= len(split_iters[cur_split_key]):
+                    if self.verbose:
+                        logger.debug("Reached epoch-end: {}", cur_split_key)
+                    if prefetch_strategy == 'fresh':
+                        # Regenerate index is required
+                        split_iters[cur_split_key] = list()
+                        if self.verbose:
+                            logger.debug('Prefetching batches for split: {}', cur_split_key)
+                        for cur_i, cur_batch in enumerate(tqdm(split_dataloaders[cur_split_key])):
+                            split_iters[cur_split_key].append(deepcopy(cur_batch))
+                    elif prefetch_strategy == 'reuse':
+                        # Reassign current batch iter
+                        next_iter_key = random.randint(0, len(prefetch_iters[cur_split_key])-1)
+                        if self.verbose:
+                            logger.debug('Reassigned prefetched batches for split: {} to group {}', cur_split_key, next_iter_key)
+                        split_iters[cur_split_key] = prefetch_iters[cur_split_key][next_iter_key]
+                        if reuse_shuffle_when_reassign:
+                            random.shuffle(split_iters[cur_split_key])
+                    split_idx_idx[cur_split_key] = 0
+
+                    # Progress epoch
+                    if prog_loss_weight_mode == 'epoch_end':
+                        self.controller.next_epoch(
+                            prog_main=(split_configs[cur_split_key]['train_main_latent'] == 'True'),
+                            prog_pheno=(split_configs[cur_split_key]['train_pheno'] == 'True'),
+                            selected_pheno=split_configs[cur_split_key].get('selected_pheno'),
+                            prog_signature=(split_configs[cur_split_key]['train_signature'] == 'True'),
+                            selected_signature=split_configs[cur_split_key].get('selected_signature'))
+
+                cur_batch = split_iters[cur_split_key][split_idx_idx[cur_split_key]]
+
+                if self.verbose:
+                    logger.debug("cur_batch['cell_key'][:10]: {}", cur_batch['cell_key'][:10])
+
+                # Train
+                controller_ret = self.controller.train(batch=cur_batch,
+                                                       backward_reconstruction_loss=(split_configs[cur_split_key][
+                                                                                         'train_main_latent'] == 'True'),
+                                                       backward_main_latent_regularization=(
+                                                                   split_configs[cur_split_key][
+                                                                       'train_main_latent'] == 'True'),
+                                                       backward_pheno_loss=(split_configs[cur_split_key][
+                                                                                'train_pheno'] == 'True'),
+                                                       selected_pheno=split_configs[cur_split_key].get(
+                                                           'selected_pheno'),
+                                                       backward_signature_loss=(split_configs[cur_split_key][
+                                                                                    'train_signature'] == 'True'),
+                                                       selected_signature=split_configs[cur_split_key].get(
+                                                           'selected_signature'),
+                                                       detach=(split_configs[cur_split_key].get('detach') == 'True'),
+                                                       detach_from=split_configs[cur_split_key].get('detach_from', ''),
+                                                       save_raw_loss=save_raw_loss)
+
+                # Log
+                if make_logs:
+                    self.logger.log_loss(trainer_output=controller_ret, tick=self.controller.cur_tick,
+                                         loss_name_prefix=log_prefix, selected_loss_group=log_loss_groups)
+
+                # Proceed to next tick, tick controller (so that when resume, the model has already been on next tick)
+                self.controller.tick()
+                cur_split_idx += 1
+                cur_tick += 1
+                split_idx_idx[cur_split_key] += 1
+
+
+                # Test
+                if perform_test and cur_tick % test_segmant == 0:
+                    # Before performing test, turn dataset to full mode
+                    self.count_data.mode = 'all'
+                    # Perform test
+                    for cur_test in tests:
+                        # When test, all latents will be evaluated
+                        self.test(split_id=cur_test['on_split'],
+                                  test_main=not (cur_test.get('test_main') == 'False'),
+                                  test_pheno=not (cur_test.get('test_pheno') == 'False'),
+                                  selected_pheno=cur_test.get('selected_pheno'),
+                                  test_signature=not (cur_test.get('test_signature') == 'False'),
+                                  selected_signature=cur_test.get('selected_signature'),
+                                  make_logs=(cur_test.get('make_logs') == 'True'),
+                                  log_loss_groups=cur_test.get('log_loss_groups', log_loss_groups),
+                                  log_prefix=cur_test.get('log_prefix', log_prefix),
+                                  dump_latent=(cur_test.get('dump_latent') == 'True'),
+                                  latent_prefix=cur_test.get('latent_prefix', ''),
+                                  save_raw_loss=save_raw_loss)
+
+                    if prog_loss_weight_mode == 'on_test':
+                        self.controller.next_epoch(prog_main=(loss_prog_on_test['prog_main'] == 'True'),
+                                                   prog_pheno=(loss_prog_on_test['train_pheno'] == 'True'),
+                                                   selected_pheno=loss_prog_on_test.get('selected_pheno'),
+                                                   prog_signature=(loss_prog_on_test['train_signature'] == 'True'),
+                                                   selected_signature=loss_prog_on_test.get('selected_signature'))
+                # Checkpoint
+                if perform_checkpoint and cur_tick % checkpoint_segment == 0:
+                    # Save checkpoint
+                    self.save_checkpoint(training_state=resume_dict,
+                                         checkpoint_path=self.log_path + checkpoint_prefix + '_tick_' + str(
+                                             cur_tick) + '.pth',
+                                         save_model_arch=checkpoint_save_arch)
+        else:
+            raise NotImplementedError
 
     def save_checkpoint(self, training_state=None,
                         checkpoint_path=None,
@@ -1015,15 +1216,14 @@ class SAKRA(object):
 
     def execute_inference(self, story: list, resume_dict=None):
         if self.verbose:
-            print('Executing inference routine')
-            print(story)
+            logger.debug('Executing inference routine {}', story)
 
         # No need to handle resume here, since there will be no training
 
         for cur_story_item in story:
             if self.verbose:
-                print('Performing inference on story:', cur_story_item.get('remark'))
-                print(cur_story_item)
+                logger.debug('Performing inference on story: {}', cur_story_item.get('remark'))
+                logger.debug('Story item: {}', cur_story_item)
             cur_action = cur_story_item.get('action', 'test')
 
             if cur_action == 'test':
@@ -1041,6 +1241,7 @@ class SAKRA(object):
                           compression=(cur_story_item.get('compression', 'none')),
                           save_raw_loss=(cur_story_item.get('save_raw_loss') == 'True'))
 
+
     def train_story(self, story: list,
                     resume=False, resume_dict=None):
         # Handle resume
@@ -1048,15 +1249,15 @@ class SAKRA(object):
         if resume:
             cur_story_item_idx = resume_dict['cur_story_item_idx']
             if self.verbose:
-                print("To resume training from story indexed as", cur_story_item_idx)
+                logger.debug("To resume training from story indexed as {}", cur_story_item_idx)
         else:
             resume_dict = dict()
 
         for cur_story_item in story[cur_story_item_idx:]:
             # Verbose logging
             if self.verbose:
-                print("Training story:", cur_story_item.get('remark'))
-                print(cur_story_item)
+                logger.debug("Training story: {}", cur_story_item.get('remark'))
+                logger.debug("Stroty item: {}", cur_story_item)
             cur_action = cur_story_item.get('action', 'train')
 
             # Persist training story info for saving checkpoints
@@ -1120,7 +1321,7 @@ class SAKRA(object):
 
                 # Verbose logging
                 if self.verbose:
-                    print("Hybrid training invoked.")
+                    logger.debug("Current story invokes hybrid training")
 
                 # Train model in hybrid mode
                 self.train_hybrid(split_configs=cur_story_item['split_configs'],
@@ -1145,22 +1346,128 @@ class SAKRA(object):
                     resume = False
                     resume_dict = dict()
 
+            elif cur_action == 'train_hybrid_fastload':
+                torch.multiprocessing.set_sharing_strategy('file_system')
+                count_data_mode_before = self.count_data.mode
+                self.count_data.mode = 'key'
+
+                # Verbose logging
+                if self.verbose:
+                    logger.debug("Current story invokes hybrid training with fastload")
+                    logger.debug('Set torch.multiprocessing.set_sharing_strategy: file_system')
+                    logger.debug('Temporarily Set count_data.mode: key')
+
+
+                # Train model in hybrid mode
+                self.train_hybrid_fastload(split_configs=cur_story_item['split_configs'],
+                                  ticks=cur_story_item.get('ticks'),
+                                  hybrid_mode=cur_story_item.get('hybrid_mode'),
+                                  prog_loss_weight_mode=cur_story_item.get('prog_loss_weight_mode'),
+                                  make_logs=(cur_story_item.get('make_logs') == 'True'),
+                                  log_prefix=cur_story_item.get('log_prefix', ''),
+                                  log_loss_groups=cur_story_item.get('log_loss_groups', ['loss', 'regularization']),
+                                  perform_test=(cur_story_item.get('perform_test') == 'True'),
+                                  test_segmant=cur_story_item.get('test_segment'),
+                                  tests=cur_story_item.get('tests'),
+                                  loss_prog_on_test=cur_story_item.get('loss_prog_on_test'),
+                                  perform_checkpoint=(cur_story_item.get('perform_checkpoint') == 'True'),
+                                  checkpoint_segment=(cur_story_item.get('checkpoint_segment', 2000)),
+                                  checkpoint_prefix=(cur_story_item.get('checkpoint_prefix')),
+                                  checkpoint_save_arch=(cur_story_item.get('checkpoint_save_arch') == 'True'),
+                                  resume=resume, resume_dict=resume_dict, save_raw_loss=(cur_story_item.get('save_raw_loss') == 'True'),
+                                  prefetch_strategy=(cur_story_item.get('prefetch_strategy', 'fresh')),
+                                  reuse_factor=(cur_story_item.get('reuse_factor', 5)),
+                                  reuse_shuffle_when_reassign=(cur_story_item.get('reuse_shuffle_when_reassign') == 'True'))
+
+                self.count_data.mode = count_data_mode_before
+
+                # Handle resume completion
+                if resume:
+                    resume = False
+                    resume_dict = dict()
+
             cur_story_item_idx += 1
 
 
-if __name__ == '__main__':
-    print('SCARE/SAKRA Prototype')
-    print('Loading dataset...')
-    print('Working directory:', os.getcwd())
+    def insert_external_module(self, insert_config:dict, verbose=True):
+        if verbose:
+            logger.debug('Inserting external modules...')
+            logger.debug('Insertion config: {}', insert_config)
+
+        for cur_item_i in insert_config:
+            cur_insert_item = insert_config[cur_item_i]
+
+            # Load source model configs
+            ext_model_config_path = cur_insert_item['ext_model_config_path']
+            with open(ext_model_config_path, 'r') as f:
+                ext_model_config = json.load(f)
+            ext_signature_config_path = cur_insert_item['ext_signature_config_path']
+            with open(ext_signature_config_path, 'r') as f:
+                ext_signature_config = json.load(f)
+            ext_pheno_config_path = cur_insert_item['ext_pheno_config_path']
+            with open(ext_pheno_config_path, 'r') as f:
+                ext_pheno_config = json.load(f)
+
+            # Load saved model parameter
+            ext_checkpoint_path = cur_insert_item['ext_checkpoint_path']
+            ext_checkpoint = torch.load(ext_checkpoint_path)
+
+            # Resume model
+            ## Use the input dimension of pre-encoder to probe input dimension
+            probed_model_input_dim = ext_checkpoint['model_state_dict']['model.pre_encoder.model_list.0.weight'].shape[1]
+            ext_model = Extractor(input_dim=probed_model_input_dim,
+                                  signature_config=ext_signature_config,
+                                  pheno_config=ext_pheno_config,
+                                  main_lat_config=ext_model_config['main_latent'],
+                                  pre_encoder_config=ext_model_config.get('pre_encoder_config'),
+                                  verbose=verbose)
+
+            ext_model.load_state_dict(ext_checkpoint['model_state_dict'])
+            if verbose:
+                logger.debug('{}: External model resumed', cur_item_i)
+
+            source_model = None
+            if cur_insert_item.get('source') == 'decoder':
+                source_model = deepcopy(ext_model.model['decoder'])
+            elif cur_insert_item.get('source') == 'pheno_models':
+                # TODO: to allow inserting other pre-trained modules, e.g. classifiers, regressors
+                # generally, the latent dim should be consistent
+                # may also implement adaptor layer for extra transformations
+                source_model = deepcopy(ext_model.model['pheno_models'][cur_insert_item.get('source_name')])
+            elif cur_insert_item.get('source') == 'signature_regressors':
+                source_model = deepcopy(ext_model.model['signature_regressors'][cur_insert_item.get('source_name')])
+            else:
+                raise NotImplementedError('Insertion type is not specified')
+
+            if self.verbose:
+                logger.debug('{}: Loaded {} {} from the external model', cur_item_i,  cur_insert_item.get('source'), cur_insert_item.get('source_name', ''))
+
+            if cur_insert_item.get('destination_type') == 'decoder':
+                self.model.model['decoder'] = source_model
+                if self.verbose:
+                    logger.debug('{}: Replaced current decoder with loaded external module', cur_item_i)
+            elif cur_insert_item.get('destination_type') == 'pheno':
+                self.model.model['pheno_models'][cur_insert_item.get('destination_name')] = source_model
+                if self.verbose:
+                    logger.debug('{}: Replaced pheno model {} with loaded external module', cur_item_i, cur_insert_item.get('destination_name'))
+            elif cur_insert_item.get('destination_type') == 'signature':
+                self.model.model['signature_regressors'][cur_insert_item.get('destination_name')] = source_model
+                if self.verbose:
+                    logger.debug('{}: Replaced signature model {} with loaded external module',cur_item_i , cur_insert_item.get('destination_name'))
+
+@logger.catch
+def main():
+    logger.info('SCARE/SAKRA Prototype')
+    logger.info('Working directory: {}', os.getcwd())
 
     args = parse_args()
     if type(args.inference) is str and len(args.inference) > 0:
         if args.verbose:
-            print("Entering inference mode from checkpoint:", args.inference)
+            logger.debug("Entering inference mode from checkpoint: {}", args.inference)
 
         # Load inference story file
         if args.verbose:
-            print("Loading inference story file:", args.inference_story)
+            logger.debug("Loading inference story file: {}", args.inference_story)
 
         # Load inference story *list*
         with open(args.inference_story, 'r') as f:
@@ -1183,7 +1490,7 @@ if __name__ == '__main__':
 
     elif type(args.resume) is str and len(args.resume) > 0:
         if args.verbose:
-            print("Resuming checkpoint:", args.resume)
+            logger.info("Resuming checkpoint:", args.resume)
 
         # Init SAKRA instance
         instance = SAKRA(config_json_path=args.config,
@@ -1197,8 +1504,43 @@ if __name__ == '__main__':
         instance.train_story(story=instance.config['story'],
                              resume=True,
                              resume_dict=checkpoint['training_state'])
+    elif args.external_module:
+        if args.verbose:
+            logger.info("Merging external modules")
+
+        # Error check: should not simultaneously resume/inference while merging with external modules
+        if type(args.inference) is str and len(args.inference) > 0:
+            raise ValueError(
+                'Do not perform inference when importing external modules, try to import and save a merged model first')
+        if type(args.resume) is str and len(args.resume) > 0:
+            raise ValueError(
+                'Do not resume training when importing external modules, try to import and save a merged model first')
+
+        # Init SAKURA instance (suppress training to merge modules)
+        instance = SAKRA(config_json_path=args.config,
+                         verbose=args.verbose,
+                         suppress_train=True)
+
+        # Load insert config
+        insert_config_path = args.external_module_path
+        with open(insert_config_path, 'r') as f:
+            insert_config = json.load(f)
+
+        # Merge external model
+        instance.insert_external_module(insert_config=insert_config,
+                                        verbose=args.verbose)
+
+        # Re-init optimizer
+        instance.controller.setup_optimizer()
+
+        # Train as normal
+        instance.train_story(story=instance.config['story'])
+
 
     else:
         instance = SAKRA(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=args.suppress_train)
+
+if __name__ == '__main__':
+    main()

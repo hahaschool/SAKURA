@@ -4,6 +4,7 @@ import sklearn
 import sklearn.preprocessing as skprep
 import torch
 from packaging import version
+import scipy.sparse
 
 
 class ToTensor(object):
@@ -13,11 +14,18 @@ class ToTensor(object):
 
     def __call__(self, sample, input_type='gene', force_tensor_type=None):
         ret = None
+        #print(type(sample))
+        #print(sample)
         if input_type == 'gene':
             if type(sample) is pd.core.frame.DataFrame:
                 ret = torch.from_numpy(sample.astype(np.float).values).transpose(0, 1).float()
             elif type(sample) is pd.core.series.Series:
                 ret = torch.from_numpy(sample.astype(np.float).values).unsqueeze(0).float()
+            elif type(sample) is np.ndarray:
+                ret = torch.from_numpy(sample).float()
+            elif scipy.sparse.isspmatrix(sample):
+                # In case some transformations unwrapped the pd.DataFrame.sparse
+                ret = torch.from_numpy(sample.todense()).float()
             else:
                 raise NotImplementedError
         elif input_type == 'pheno':
@@ -39,6 +47,21 @@ class ToTensor(object):
             else:
                 raise NotImplementedError('Expected tensor type not supported yet')
         return ret
+
+class ToBinary(object):
+    """
+    To convert input vector into binary form (0 or 1)
+    To handle floating point error, a threshold (epsilon) is applied to check if the value should be classified as 0 or 1
+    """
+
+    def __call__(self, sample, threshold=1e-6, inverse=False, scale_factor=1.0):
+        binarizer = skprep.Binarizer(threshold=threshold).fit(sample)
+        ret = binarizer.transform(sample)
+        if inverse:
+            ret = 1-ret
+        ret = ret*scale_factor
+        return ret
+
 
 class ToOnehot(object):
     """

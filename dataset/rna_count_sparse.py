@@ -1,5 +1,6 @@
 import json
 
+import numpy
 import numpy as np
 import pandas as pd
 import scipy
@@ -12,7 +13,7 @@ from utils.data_transformations import ToKBins
 from utils.data_transformations import ToOnehot
 from utils.data_transformations import ToOrdinal
 from utils.data_transformations import ToTensor
-
+from utils.data_transformations import ToBinary
 
 class SCRNASeqCountDataSparse(Dataset):
     "Accepts matrixMM (could be dgcmatrix in R) as data contained (will still load everything into memory, but using sparse matrix now)."
@@ -40,6 +41,7 @@ class SCRNASeqCountDataSparse(Dataset):
         self.to_onehot = ToOnehot()
         self.to_ordinal = ToOrdinal()
         self.to_kbins = ToKBins()
+        self.to_binary = ToBinary()
 
         # Read gene expression matrix (from MM .mtx file, as sparse matrix)
         if verbose:
@@ -169,7 +171,8 @@ class SCRNASeqCountDataSparse(Dataset):
     def export_data(self, item,
                     include_raw=True,
                     include_proc=True,
-                    include_cell_key=True):
+                    include_cell_key=True,
+                    include_item=True):
         """
         Export a batch of data given 'item' as index.
         :param item: index
@@ -189,6 +192,9 @@ class SCRNASeqCountDataSparse(Dataset):
         if include_cell_key is True:
             ret['cell_key'] = self.gene_expr_mat.columns.values[item]
 
+        if include_item is True:
+            ret['item'] = item
+
         # Prepare raw gene output (if needed)
         if include_raw is True:
             ret['expr_mat'] = self.gene_expr_mat.iloc[:, item].copy()
@@ -199,7 +205,12 @@ class SCRNASeqCountDataSparse(Dataset):
                 ret['expr'][cur_expr_key] = self.__select_expr_mat(cur_expr_key, item)
                 # Post Transformation
                 for cur_procedure in cur_expr_meta['post_procedure']:
-                    if cur_procedure['type'] == 'ToTensor':
+                    if cur_procedure['type'] == 'ToBinary':
+                        ret['expr'][cur_expr_key] = self.to_binary(ret['expr'][cur_expr_key],
+                                                                   threshold=cur_procedure.get('threshold'),
+                                                                   inverse=(cur_procedure.get('inverse') == 'True'),
+                                                                   scale_factor=cur_procedure.get('scale_factor', 1.0))
+                    elif cur_procedure['type'] == 'ToTensor':
                         ret['expr'][cur_expr_key] = self.to_tensor(ret['expr'][cur_expr_key],
                                                                    input_type='gene',
                                                                    force_tensor_type=cur_procedure.get('force_tensor_type'))
@@ -235,6 +246,11 @@ class SCRNASeqCountDataSparse(Dataset):
                                                                            n_bins=cur_procedure['n_bins'],
                                                                            encode=cur_procedure['encode'],
                                                                            strategy=cur_procedure['strategy'])
+                        elif cur_procedure['type'] == 'ToBinary':
+                            ret['pheno'][pheno_output_key] = self.to_binary(sample=ret['pheno'][pheno_output_key],
+                                                                            threshold=cur_procedure.get('threshold'),
+                                                                            inverse=(cur_procedure.get('inverse') == 'True'),
+                                                                            scale_factor=cur_procedure.get('scale_factor', 1.0))
                         else:
                             raise NotImplementedError('Unsupported transformation type for phenotype groups')
                 elif cur_pheno_meta['type'] == 'numerical':
@@ -245,12 +261,28 @@ class SCRNASeqCountDataSparse(Dataset):
                             ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
                                                                             input_type='pheno',
                                                                             force_tensor_type=cur_procedure.get('force_tensor_type'))
+                        elif cur_procedure['type'] == 'ToBinary':
+                            ret['pheno'][pheno_output_key] = self.to_binary(sample=ret['pheno'][pheno_output_key],
+                                                                            threshold=cur_procedure.get('threshold'),
+                                                                            inverse=(cur_procedure.get('inverse') == 'True'),
+                                                                            scale_factor=cur_procedure.get('scale_factor', 1.0))
                         else:
                             raise NotImplementedError('Unsupported transformation type for phenotype groups')
                 else:
                     raise ValueError('Unsupported phenotype group name')
 
         return ret
+
+    def collate_fn(self, batch):
+        # Assemble individual cell keys and export a whole set
+        collated_item = list()
+        for sample in batch:
+            sample['item'] = numpy.array(sample['item']).squeeze()
+            collated_item.append(sample['item'])
+        return self.export_data(collated_item,
+                                include_raw=True,
+                                include_proc=True,
+                                include_cell_key=True)
 
     def __len__(self):
         # Length of the dataset is considered as the number of cells
@@ -267,6 +299,8 @@ class SCRNASeqCountDataSparse(Dataset):
                                     include_raw=False,
                                     include_proc=False,
                                     include_cell_key=True)
+        elif self.mode == 'index':
+            return
         else:
             return self.export_data(item,
                                     include_raw=False,
