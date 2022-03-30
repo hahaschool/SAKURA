@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
+import scipy.sparse
 import sklearn
 import sklearn.preprocessing as skprep
 import torch
 from packaging import version
-import scipy.sparse
 
 
 class ToTensor(object):
@@ -87,7 +87,7 @@ class ToOrdinal(object):
     Useful for losses like torch.nn.CrossEntropyLoss
     """
 
-    def __call__(self, sample, order='auto', handle_unknown='use_encoded_value', unknown_value=None):
+    def __call__(self, sample, order='auto', handle_unknown='use_encoded_value', unknown_value=np.nan):
         # Adaptations
         if order != 'auto':
             if type(order) is list:
@@ -95,7 +95,8 @@ class ToOrdinal(object):
 
         # Resolving compatibility of older sklearns
         if version.parse(sklearn.__version__) >= version.parse('0.24'):
-            ortrs = skprep.OrdinalEncoder(categories=order, handle_unknown=handle_unknown, unknown_value=unknown_value, dtype=np.int).fit(sample)
+            ortrs = skprep.OrdinalEncoder(categories=order, handle_unknown=handle_unknown, unknown_value=unknown_value,
+                                          dtype=np.int).fit(sample)
         else:
             ortrs = skprep.OrdinalEncoder(categories=order, dtype=np.int).fit(sample)
 
