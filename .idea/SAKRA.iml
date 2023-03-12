@@ -216,6 +216,7 @@
       <excludeFolder url="file://$MODULE_DIR$/runs/FT03_01/logs" />
       <excludeFolder url="file://$MODULE_DIR$/runs_done" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/runs_done_EX42_COMBAT_CITE_Stage1" />
     </content>
     <content url="file://$MODULE_DIR$/runs/EX20_03" />
     <content url="file://$MODULE_DIR$/runs/EX20_04" />

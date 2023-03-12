@@ -5,7 +5,42 @@
       <webServer id="24448446-e51a-4947-b1c4-108ac34ea1c4" name="HPC1" url="http:///">
         <fileTransfer rootFolder="/data/d0/gds/zhzhang" accessType="SFTP" host="hpc1.cse.cuhk.edu.hk" port="22" sshConfigId="e6cfd8dc-3f1c-49a9-91fe-99297fef5ebd" sshConfig="zhzhang@hpc1.cse.cuhk.edu.hk:22 password">
           <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" maxConnections="50" passiveMode="true" shareSSLContext="true" />
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="998c48ec-456c-4a21-b404-50d20ba35e9e" name="HPC1_Local_TUN" url="http:///">
+        <fileTransfer rootFolder="/data/d0/gds/zhzhang" accessType="SFTP" host="127.0.0.1" port="33222" sshConfigId="c3a5ce30-6807-49c7-a75b-a1425f71545c" sshConfig="127.0.0.1:33222">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="85c0b2db-5103-442f-beb4-d8b1fd3d06a5" name="DEV1_Local_FRP">
+        <fileTransfer accessType="SFTP" host="127.0.0.1" port="33777" sshConfigId="88fbcfeb-e7c1-4110-87ef-fb64abb177a8" sshConfig="127.0.0.1:33777" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="9e9b8b21-00aa-40e9-8dab-98820d11e8e0" name="DEV3_Local_FRP">
+        <fileTransfer accessType="SFTP" host="127.0.0.1" port="33778" sshConfigId="6803ab00-16d6-4f74-ae38-252017ba1d26" sshConfig="127.0.0.1:33778" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="38bda0a7-e44c-4f28-940f-86c2e2a08b5c" name="DEV4_Local_FRP">
+        <fileTransfer accessType="SFTP" host="127.0.0.1" port="33779" sshConfigId="24e05666-8040-4417-b84d-fcdaba422add" sshConfig="127.0.0.1:33779" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="c883c9d1-2d6c-4c7e-a461-60403e0b4c63" name="DEV2_Local_FRP">
+        <fileTransfer accessType="SFTP" host="127.0.0.1" port="23778" sshConfigId="105e6906-4c8b-405b-818b-57ee1590b417" sshConfig="127.0.0.1:23778" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
         </fileTransfer>
       </webServer>

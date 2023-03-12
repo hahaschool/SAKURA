@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="hpc1.cse.cuhk.edu.hk" id="e6cfd8dc-3f1c-49a9-91fe-99297fef5ebd" port="22" nameFormat="DESCRIPTIVE" username="zhzhang" />
+      <sshConfig authType="PASSWORD" host="127.0.0.1" id="c3a5ce30-6807-49c7-a75b-a1425f71545c" port="33222" customName="127.0.0.1:33222" nameFormat="CUSTOM" username="zhzhang" useOpenSSHConfig="true">
+        <option name="customName" value="127.0.0.1:33222" />
+      </sshConfig>
+      <sshConfig host="127.0.0.1" id="88fbcfeb-e7c1-4110-87ef-fb64abb177a8" keyPath="$PROJECT_DIR$/../.ssh/id_rsa" port="33777" customName="127.0.0.1:33777" nameFormat="CUSTOM" username="ubuntu" useOpenSSHConfig="true">
+        <option name="customName" value="127.0.0.1:33777" />
+      </sshConfig>
+      <sshConfig host="127.0.0.1" id="6803ab00-16d6-4f74-ae38-252017ba1d26" keyPath="$PROJECT_DIR$/../.ssh/id_rsa" port="33778" customName="127.0.0.1:33778" nameFormat="CUSTOM" username="ubuntu" useOpenSSHConfig="true">
+        <option name="customName" value="127.0.0.1:33778" />
+      </sshConfig>
+      <sshConfig host="127.0.0.1" id="24e05666-8040-4417-b84d-fcdaba422add" keyPath="$PROJECT_DIR$/../.ssh/id_rsa" port="33779" customName="127.0.0.1:33779" nameFormat="CUSTOM" username="ubuntu" useOpenSSHConfig="true">
+        <option name="customName" value="127.0.0.1:33779" />
+      </sshConfig>
+      <sshConfig host="127.0.0.1" id="105e6906-4c8b-405b-818b-57ee1590b417" keyPath="$PROJECT_DIR$/../.ssh/id_rsa" port="23778" customName="127.0.0.1:23778" nameFormat="CUSTOM" username="ubuntu" useOpenSSHConfig="true">
+        <option name="customName" value="127.0.0.1:23778" />
+      </sshConfig>
+    </configs>
+  </component>
+</project>

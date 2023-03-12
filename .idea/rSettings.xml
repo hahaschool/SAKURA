@@ -2,6 +2,5 @@
 <project version="4">
   <component name="RSettings">
     <option name="interpreterPath" value="/Library/Frameworks/R.framework/Versions/4.1/Resources/bin/R" />
-    <option name="rstudioApiEnabled" value="false" />
   </component>
 </project>

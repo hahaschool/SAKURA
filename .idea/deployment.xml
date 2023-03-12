@@ -1,7 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" promptOnRemoteOverwrite="CHECK_CONTENT" serverName="HPC1" createEmptyFolders="true" showExcludedInSync="true">
+  <component name="PublishConfigData" promptOnRemoteOverwrite="CHECK_CONTENT" serverName="DEV1_Local_FRP" createEmptyFolders="true" confirmBeforeUploading="false" showExcludedInSync="true">
+    <option name="confirmBeforeUploading" value="false" />
     <serverData>
+      <paths name="DEV1_Local_FRP">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/SAKRA" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="DEV2_Local_FRP">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/SAKRA" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="DEV3_Local_FRP">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/SAKRA" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="DEV4_Local_FRP">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/SAKRA" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="HPC1">
         <serverdata>
           <mappings>
@@ -9,10 +38,10 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="zhzhang@hpc9.cse.cuhk.edu.hk:22">
+      <paths name="HPC1_Local_TUN">
         <serverdata>
           <mappings>
-            <mapping deploy="/research/kevinyip11/zhzhang/SAKRA" local="$PROJECT_DIR$" />
+            <mapping deploy="wd/SAKRA" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
