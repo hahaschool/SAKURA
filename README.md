@@ -60,7 +60,7 @@ The `sakura.py` script handles the different operations of the generic SAKURA fr
 ```
 python3 sakura.py
 
--c, --config            # model config JSON path (including details of data loading & splitting, model settings, training & testing, checkpoint & result saving, etc.) 
+-c, --config            # model JSON configuration file path (including details of data loading & splitting, model settings, training & testing, checkpoint & result saving, etc.) 
 -s, --suppress_train    # suppress model training, only setup dataset and model
 -r, --resume            # resume training process from saved checkpoint file
 -i, --inference         # perform inference from saved checkpoint file containing models
@@ -70,11 +70,10 @@ python3 sakura.py
 -E, --external_module_path  # path of external model config
 ```
 
-The script handles data loading as specified above according to all the file paths included in the config. 
-The default workflow to train a SAKURA model is to first load all data`(input file paths)`and then split the preprocessed data into training/testing sets`(how to split & store the datasets)`. 
-The SAKURA autoencoder model will then be built with details specified in the config`(e.g. number encoder/decoder neurons, dimension of latent space, loss function, regularization)`.
-Next, for model training and testing, details like `optimizer settings, checkpoint and test segment, logging and result dumping settings`should also be specified.
-In this case, all relevant settings mentioned above are designed to be handled in the config JSON file. So it will be much easier to pass in all the parameters as a params dictionary, instead of the argument parser.
+By default, the SAKURA model training workflow involves loading all the data from `input file paths` and then splitting the preprocessed data into training and testing sets, with detail configuration about `how to split/store the datasets`. 
+The SAKURA autoencoder model will be built based on the parameters including `the number of encoder/decoder neurons, the dimension of latent space, the loss function, the regularization, and so on`.
+To facilitate model training and testing, users also specify `optimizer settings, checkpoint and test segment, logging and result dumping settings`. 
+All of these relevant settings can be conveniently specified in the model JSON configuration file, allowing them to be easily passed into SAKURA as a params dictionary instead of using an argument parser. 
 
 <!--### Performing classification with trained netAE model
 After training, one may want to use a classifier on the embedded space to test its classification accuracy. The `inference.py` script deals with comparing classification accuracy of netAE with other baseline models when using KNN and logistic regression, two simple classifiers. To start, make sure netAE, AE (the unsuperivsed counterpart), scVI, PCA, and ZIFA are trained and have their embedded spaces located in `MODEL_PATH`. Then simply pass in `--data-path`, `--model-path`, `--lab-size`, and `--dataset`. Additionally, to ensure that the labeled set used in training netAE is the same as here, make sure that you pass in the same seed `--seed` here as when training netAE.
