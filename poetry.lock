@@ -118,14 +118,14 @@ files = [
 
 [[package]]
 name = "jsii"
-version = "1.77.0"
+version = "1.78.0"
 description = "Python client for jsii runtime"
 category = "dev"
 optional = false
 python-versions = "~=3.7"
 files = [
-    {file = "jsii-1.77.0-py3-none-any.whl", hash = "sha256:553e04a20b8fb9927d93d8b5e96f984f514c5acc4b06bd63b4e7130228d0c7fc"},
-    {file = "jsii-1.77.0.tar.gz", hash = "sha256:28f070f3bce79e9c2d822607a960fe927e5179cf99416c94c39fb41581250854"},
+    {file = "jsii-1.78.0-py3-none-any.whl", hash = "sha256:03120ccfb07afa1a1b3c21d3332159e8491e794627fae8513c9ba480ce0f105d"},
+    {file = "jsii-1.78.0.tar.gz", hash = "sha256:8dffd1f5afeb459f4f2a53c660c6ac06fa3b4e18767009923cadfed9ce8d08cc"},
 ]
 
 [package.dependencies]
@@ -334,14 +334,14 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "projen"
-version = "0.68.2"
+version = "0.68.5"
 description = "CDK for software projects"
 category = "dev"
 optional = false
 python-versions = "~=3.7"
 files = [
-    {file = "projen-0.68.2-py3-none-any.whl", hash = "sha256:dad0fc9f94bd8f2fba7d312839b1fcefe0d763018bbd1987f9f2975f32609915"},
-    {file = "projen-0.68.2.tar.gz", hash = "sha256:52fd660ba9014902087ee8b650037ec95e6637eaed626c5d5415a599dcac3fd5"},
+    {file = "projen-0.68.5-py3-none-any.whl", hash = "sha256:eb30e1be84527d1704995c082ee5f465a8bd7838caa799355b3d162545f87af4"},
+    {file = "projen-0.68.5.tar.gz", hash = "sha256:35eeba70c5f3d85255e7078ed9c8b5f6cb46389487c024f5e1a721abe4404af6"},
 ]
 
 [package.dependencies]
@@ -587,6 +587,21 @@ files = [
 ]
 
 [[package]]
+name = "tabulate"
+version = "0.9.0"
+description = "Pretty-print tabular data"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"},
+    {file = "tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c"},
+]
+
+[package.extras]
+widechars = ["wcwidth"]
+
+[[package]]
 name = "tensorboardx"
 version = "2.6"
 description = "TensorBoardX lets you watch Tensors Flow without Tensorflow"
@@ -766,4 +781,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
   python-versions = "~3.9"
-content-hash = "5a8e8370494f8894ee4fa779724d13141d7be439522ed56a0ec8928f1000b255"
+content-hash = "38dd1bb18f4e6d09d4cc115af88b19660fbda0f03aded97af6e22facf1c5d6cb"

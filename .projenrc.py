@@ -3,8 +3,8 @@ from projen.python import PythonProject
 project = PythonProject(
     author_email="hahaschool.wing@gmail.com",
     author_name="Adam Zhang",
-    module_name="SAKURA",
-    name="SAKURA",
+    module_name="sakura",
+    name="sakura",
     version="0.1.0",
     pip=False,
     venv=False,
@@ -25,6 +25,7 @@ project = PythonProject(
         "pandas@^1.5.3",
         "scikit-learn@^1.2.2",
         "scipy@^1.10.1",
+        "tabulate@^0.9.0",
     ],
     dev_deps=["pytest@^6.2.5", "pytest-asyncio@^0.16.0"],
     github_options={

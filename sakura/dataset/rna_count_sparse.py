@@ -1,78 +1,37 @@
 import json
 
+import numpy
 import numpy as np
 import pandas as pd
+import scipy
+import scipy.io
+import scipy.sparse
 from torch.utils.data import Dataset
 
-from utils.data_transformations import ToKBins
+from sakura.utils.data_transformations import ToBinary
+from sakura.utils.data_transformations import ToKBins
 # Transformations
-from utils.data_transformations import ToOnehot
-from utils.data_transformations import ToOrdinal
-from utils.data_transformations import ToTensor
+from sakura.utils.data_transformations import ToOnehot
+from sakura.utils.data_transformations import ToOrdinal
+from sakura.utils.data_transformations import ToTensor
 
 
-class SCRNASeqCountData(Dataset):
-    """
-    General scRNA-Seq Count Dataset
+class SCRNASeqCountDataSparse(Dataset):
+    "Accepts matrixMM (could be dgcmatrix in R) as data contained (will still load everything into memory, but using sparse matrix now)."
 
-    Input:
-    genotype_csv:
-        * Assuming rows are genes, colmuns are samples(/cells)
-        * rownames are gene identifiers (gene name, or ensembl ID)
-        * colnames are sample identifiers (cell name)
-    genotype_meta_csv:
-        * pre_procedure: transformations that will perform when *load* the dataset
-        * post_procedure: transformations that will perform when *export* requested samples
-    phenotype_csv:
-        * Assuming rows are samples, columns are metadata contents
-        * rownames are sample identifiers ()
-    phenotype_meta_csv:
-        * A json file to define Type, Range, and Order for phenotype columns
-        * Storage entity is a 'dict'
-        * Type: 'categorical', 'numeric', 'ordinal' (tbd)
-        * For 'categorical':
-            * Range: array of possible values, *ordered*
-        * pre_procedure
-        * post_procedure
-
-
-    Options:
-        * Mode
-
-    Modes:
-        * all
-        * sample_id
-        * expr
-        * pheno
-
-
-
-    Transformations:
-        * ToTensor:
-        * ToOneHot: transform categorical data to one-hot encoding, an order of classes should be specified, otherwise
-                    will use sorted labels, assuming the range of labels are from input
-        * ToOrdinal:
-        * ToKBins:
-        * LogNormalize:
-    """
-
-    """
-    Sample:
-    
-    
-    """
-
-    def __init__(self, gene_csv_path, pheno_csv_path,
+    def __init__(self, gene_MM_path, gene_name_csv_path, cell_name_csv_path,
+                 pheno_csv_path, pheno_df_dtype=None, pheno_df_na_filter=True,
                  gene_meta_json_path=None, pheno_meta_json_path=None,
-                 pheno_df_dtype=None, pheno_df_na_filter=True,
                  gene_meta=None, pheno_meta=None,
                  mode='all', verbose=False):
 
         # Verbose console logging
-        self.verbose=verbose
+        self.verbose = verbose
 
         # Persist argument list
-        self.gene_csv_path = gene_csv_path
+        self.gene_MM_path = gene_MM_path
+        self.gene_name_csv_path = gene_name_csv_path
+        self.cell_name_csv_path = cell_name_csv_path
         self.gene_meta_json_path = gene_meta_json_path
         self.pheno_csv_path = pheno_csv_path
         self.pheno_meta_json_path = pheno_meta_json_path
@@ -83,17 +42,44 @@ class SCRNASeqCountData(Dataset):
         self.to_onehot = ToOnehot()
         self.to_ordinal = ToOrdinal()
         self.to_kbins = ToKBins()
+        self.to_binary = ToBinary()
 
-        # Read gene expression matrix
-        self._gene_expr_mat_orig = pd.read_csv(self.gene_csv_path, index_col=0, header=0)
+        # Read gene expression matrix (from MM .mtx file, as sparse matrix)
+        if verbose:
+            print("Loading expression matrix from mtx (MM) file.")
+        # Read sparse matrix and convert to csc_matrix
+        # csc_matrix is required by pandas, also efficient when cells are stored in column side
+        self._gene_expr_mat_orig = scipy.io.mmread(self.gene_MM_path)
+        # Read gene names
+        self.gene_names = pd.read_csv(self.gene_name_csv_path, index_col=0)
+        # Read cell names
+        self.cell_names = pd.read_csv(self.cell_name_csv_path, index_col=0)
+        # Build pandas sparse DataFrame
+        if isinstance(self._gene_expr_mat_orig, np.ndarray):
+            # Fallback to dense matrix
+            self._gene_expr_mat_orig = pd.DataFrame(data=self._gene_expr_mat_orig,
+                                                    index=self.gene_names.iloc[:, 0],
+                                                    columns=self.cell_names.iloc[:, 0])
+        else:
+            self._gene_expr_mat_orig = pd.DataFrame.sparse.from_spmatrix(data=self._gene_expr_mat_orig,
+                                                                         index=self.gene_names.iloc[:, 0],
+                                                                         columns=self.cell_names.iloc[:, 0])
+
+        self._gene_expr_mat_orig.columns.name = 'cell'
+        self._gene_expr_mat_orig.index.name = 'gene'
         self.gene_expr_mat = self._gene_expr_mat_orig.copy()
+
+        # Note that sparse dataframe is doing row slicing very slowly, so for each expression set,
+        # should pre-slice the whole sparse dataframe
 
         if self.verbose:
             print('==========================')
-            print('rna_count dataset:')
-            print("Imported gene expression matrix CSV from:", self.gene_csv_path)
+            print('rna_count dataset (sparse MM version):')
+            print("Imported gene expression matrix from:", self.gene_MM_path)
+            print("Imported gene names from:", self.gene_name_csv_path)
+            print("Imported cell names from:", self.cell_name_csv_path)
             print(self.gene_expr_mat.shape)
-            print(self.gene_expr_mat.head(3))
+            print(self.gene_expr_mat.iloc[:, 0:3])
 
         # Read gene expression matrix metadata
         self.gene_meta = gene_meta
@@ -186,7 +172,8 @@ class SCRNASeqCountData(Dataset):
     def export_data(self, item,
                     include_raw=True,
                     include_proc=True,
-                    include_cell_key=True):
+                    include_cell_key=True,
+                    include_item=True):
         """
         Export a batch of data given 'item' as index.
         :param item: index
@@ -206,6 +193,9 @@ class SCRNASeqCountData(Dataset):
         if include_cell_key is True:
             ret['cell_key'] = self.gene_expr_mat.columns.values[item]
 
+        if include_item is True:
+            ret['item'] = item
+
         # Prepare raw gene output (if needed)
         if include_raw is True:
             ret['expr_mat'] = self.gene_expr_mat.iloc[:, item].copy()
@@ -216,7 +206,12 @@ class SCRNASeqCountData(Dataset):
                 ret['expr'][cur_expr_key] = self.__select_expr_mat(cur_expr_key, item)
                 # Post Transformation
                 for cur_procedure in cur_expr_meta['post_procedure']:
-                    if cur_procedure['type'] == 'ToTensor':
+                    if cur_procedure['type'] == 'ToBinary':
+                        ret['expr'][cur_expr_key] = self.to_binary(ret['expr'][cur_expr_key],
+                                                                   threshold=cur_procedure.get('threshold'),
+                                                                   inverse=(cur_procedure.get('inverse') == 'True'),
+                                                                   scale_factor=cur_procedure.get('scale_factor', 1.0))
+                    elif cur_procedure['type'] == 'ToTensor':
                         ret['expr'][cur_expr_key] = self.to_tensor(ret['expr'][cur_expr_key],
                                                                    input_type='gene',
                                                                    force_tensor_type=cur_procedure.get('force_tensor_type'))
@@ -252,6 +247,11 @@ class SCRNASeqCountData(Dataset):
                                                                            n_bins=cur_procedure['n_bins'],
                                                                            encode=cur_procedure['encode'],
                                                                            strategy=cur_procedure['strategy'])
+                        elif cur_procedure['type'] == 'ToBinary':
+                            ret['pheno'][pheno_output_key] = self.to_binary(sample=ret['pheno'][pheno_output_key],
+                                                                            threshold=cur_procedure.get('threshold'),
+                                                                            inverse=(cur_procedure.get('inverse') == 'True'),
+                                                                            scale_factor=cur_procedure.get('scale_factor', 1.0))
                         else:
                             raise NotImplementedError('Unsupported transformation type for phenotype groups')
                 elif cur_pheno_meta['type'] == 'numerical':
@@ -262,12 +262,28 @@ class SCRNASeqCountData(Dataset):
                             ret['pheno'][pheno_output_key] = self.to_tensor(sample=ret['pheno'][pheno_output_key],
                                                                             input_type='pheno',
                                                                             force_tensor_type=cur_procedure.get('force_tensor_type'))
+                        elif cur_procedure['type'] == 'ToBinary':
+                            ret['pheno'][pheno_output_key] = self.to_binary(sample=ret['pheno'][pheno_output_key],
+                                                                            threshold=cur_procedure.get('threshold'),
+                                                                            inverse=(cur_procedure.get('inverse') == 'True'),
+                                                                            scale_factor=cur_procedure.get('scale_factor', 1.0))
                         else:
                             raise NotImplementedError('Unsupported transformation type for phenotype groups')
                 else:
                     raise ValueError('Unsupported phenotype group name')
 
         return ret
+
+    def collate_fn(self, batch):
+        # Assemble individual cell keys and export a whole set
+        collated_item = list()
+        for sample in batch:
+            sample['item'] = numpy.array(sample['item']).squeeze()
+            collated_item.append(sample['item'])
+        return self.export_data(collated_item,
+                                include_raw=True,
+                                include_proc=True,
+                                include_cell_key=True)
 
     def __len__(self):
         # Length of the dataset is considered as the number of cells
@@ -284,6 +300,8 @@ class SCRNASeqCountData(Dataset):
                                     include_raw=False,
                                     include_proc=False,
                                     include_cell_key=True)
+        elif self.mode == 'index':
+            return
         else:
             return self.export_data(item,
                                     include_raw=False,

@@ -1,6 +1,6 @@
 import torch
 
-import models.modules as model
+import sakura.models.modules as model
 
 
 class Extractor(torch.nn.Module):

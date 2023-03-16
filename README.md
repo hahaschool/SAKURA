@@ -31,7 +31,7 @@ Clone the repository to your local directory. Then
 
 ```
 # in ~/.../SAKURA/
-python3 .projenrc.py
+pip install .
 ```
 
 ## Data loading
@@ -56,9 +56,10 @@ To load a small subset of the samples for testing, call `dataset.load_subset(p)`
 
 ## Basic Usage
 <!--### Training a SAKURA model-->
-The `sakura.py` script handles the different operations of the generic SAKURA framework. Explore the framework using the following command and some important argument parsers:
+The `./sakura/sakuraAE.py` script handles the different operations of the generic SAKURA framework. Explore the framework using the following command and some important argument parsers:
 ```
-python3 sakura.py
+# in ~/.../SAKURA/
+python3 -m sakura
 
 -c, --config            # model JSON configuration file path (including details of data loading & splitting, model settings, training & testing, checkpoint & result saving, etc.) 
 -s, --suppress_train    # suppress model training, only setup dataset and model

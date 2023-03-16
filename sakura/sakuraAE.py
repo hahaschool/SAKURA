@@ -16,11 +16,11 @@ import torch.utils.data
 from loguru import logger
 from tqdm import tqdm
 
-from dataset import rna_count, rna_count_sparse
-from model_controllers.extractor_controller import ExtractorController
-from models.extractor import Extractor
-from utils.data_splitter import DataSplitter
-from utils.logger import Logger
+from sakura.dataset import rna_count, rna_count_sparse
+from sakura.model_controllers.extractor_controller import ExtractorController
+from sakura.models.extractor import Extractor
+from sakura.utils.data_splitter import DataSplitter
+from sakura.utils.logger import Logger
 
 
 def parse_args():
@@ -37,7 +37,7 @@ def parse_args():
     return parser.parse_args()
 
 
-class sakura(object):
+class sakuraAE(object):
     def __init__(self, config_json_path, verbose=False,
                  suppress_train=False, suppress_tensorboardX=False):
         """
@@ -1484,7 +1484,7 @@ def main():
             inference_story = [inference_story[x] for x in inference_story]
 
         # Init SAKURA instance
-        instance = sakura(config_json_path=args.config,
+        instance = sakuraAE(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=True,
                          suppress_tensorboardX=args.suppress_tensorboardX)
@@ -1501,7 +1501,7 @@ def main():
             logger.info("Resuming checkpoint:", args.resume)
 
         # Init SAKURA instance
-        instance = sakura(config_json_path=args.config,
+        instance = sakuraAE(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=True)
 
@@ -1525,7 +1525,7 @@ def main():
                 'Do not resume training when importing external modules, try to import and save a merged model first')
 
         # Init SAKURA instance (suppress training to merge modules)
-        instance = sakura(config_json_path=args.config,
+        instance = sakuraAE(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=True)
 
@@ -1546,9 +1546,9 @@ def main():
 
 
     else:
-        instance = sakura(config_json_path=args.config,
+        instance = sakuraAE(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=args.suppress_train)
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
