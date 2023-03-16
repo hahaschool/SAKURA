@@ -46,6 +46,11 @@
       "type": "runtime"
     },
     {
+      "name": "tabulate",
+      "version": "^0.9.0",
+      "type": "runtime"
+    },
+    {
       "name": "tensorboardX",
       "version": "^2.6",
       "type": "runtime"

@@ -6,11 +6,11 @@ import torch.nn.functional
 import torch.optim
 from tabulate import tabulate
 
-import utils.distributions as distributions
-from models.extractor import Extractor
-from utils.gradient_reverse import NeutralizeLayerF
-from utils.gradient_reverse import ReverseLayerF
-from utils.sliced_wasserstein import SlicedWasserstein
+import sakura.utils.distributions as distributions
+from sakura.models.extractor import Extractor
+from sakura.utils.gradient_reverse import NeutralizeLayerF
+from sakura.utils.gradient_reverse import ReverseLayerF
+from sakura.utils.sliced_wasserstein import SlicedWasserstein
 
 
 class ExtractorController(object):

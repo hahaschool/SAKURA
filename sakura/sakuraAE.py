@@ -16,11 +16,11 @@ import torch.utils.data
 from loguru import logger
 from tqdm import tqdm
 
-from dataset import rna_count, rna_count_sparse
-from model_controllers.extractor_controller import ExtractorController
-from models.extractor import Extractor
-from utils.data_splitter import DataSplitter
-from utils.logger import Logger
+from sakura.dataset import rna_count, rna_count_sparse
+from sakura.model_controllers.extractor_controller import ExtractorController
+from sakura.models.extractor import Extractor
+from sakura.utils.data_splitter import DataSplitter
+from sakura.utils.logger import Logger
 
 
 def parse_args():
@@ -1550,5 +1550,5 @@ def main():
                          verbose=args.verbose,
                          suppress_train=args.suppress_train)
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()

@@ -1,4 +1,3 @@
-from scripts.sakura import main
+from sakura.sakuraAE import main
 
-def run_SAKURA():
-    main()
+main()

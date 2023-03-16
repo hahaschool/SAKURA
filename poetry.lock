@@ -587,6 +587,21 @@ files = [
 ]
 
 [[package]]
+name = "tabulate"
+version = "0.9.0"
+description = "Pretty-print tabular data"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"},
+    {file = "tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c"},
+]
+
+[package.extras]
+widechars = ["wcwidth"]
+
+[[package]]
 name = "tensorboardx"
 version = "2.6"
 description = "TensorBoardX lets you watch Tensors Flow without Tensorflow"
@@ -766,4 +781,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
   python-versions = "~3.9"
-content-hash = "c71e4939dac7c44e652a2a85a5b2c2b5b6fbd465b56b9a866bc0ee6fd9ca7a89"
+content-hash = "38dd1bb18f4e6d09d4cc115af88b19660fbda0f03aded97af6e22facf1c5d6cb"
