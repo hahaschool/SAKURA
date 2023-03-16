@@ -5,7 +5,7 @@ requires = [ "poetry_core>=1.0.0" ]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "SAKURA"
+name = "sakura"
 version = "0.1.0"
 description = ""
 authors = [ "Adam Zhang <hahaschool.wing@gmail.com>" ]
@@ -24,6 +24,6 @@ repository = "https://github.com/hahaschool/SAKURA.git"
   tqdm = "^4.65.0"
 
   [tool.poetry.dev-dependencies]
-  projen = "0.68.2"
+  projen = "0.68.5"
   pytest-asyncio = "^0.16.0"
   pytest = "^6.2.5"

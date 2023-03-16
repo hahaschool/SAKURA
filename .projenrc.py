@@ -3,8 +3,8 @@ from projen.python import PythonProject
 project = PythonProject(
     author_email="hahaschool.wing@gmail.com",
     author_name="Adam Zhang",
-    module_name="SAKURA",
-    name="SAKURA",
+    module_name="sakura",
+    name="sakura",
     version="0.1.0",
     pip=False,
     venv=False,

@@ -2,8 +2,63 @@
   "dependencies": [
     {
       "name": "projen",
-      "version": "0.63.7",
+      "version": "0.68.5",
       "type": "devenv"
+    },
+    {
+      "name": "pytest-asyncio",
+      "version": "^0.16.0",
+      "type": "devenv"
+    },
+    {
+      "name": "pytest",
+      "version": "^6.2.5",
+      "type": "devenv"
+    },
+    {
+      "name": "loguru",
+      "version": "^0.6.0",
+      "type": "runtime"
+    },
+    {
+      "name": "numpy",
+      "version": "^1.24.2",
+      "type": "runtime"
+    },
+    {
+      "name": "pandas",
+      "version": "^1.5.3",
+      "type": "runtime"
+    },
+    {
+      "name": "python",
+      "version": "~3.9",
+      "type": "runtime"
+    },
+    {
+      "name": "scikit-learn",
+      "version": "^1.2.2",
+      "type": "runtime"
+    },
+    {
+      "name": "scipy",
+      "version": "^1.10.1",
+      "type": "runtime"
+    },
+    {
+      "name": "tensorboardX",
+      "version": "^2.6",
+      "type": "runtime"
+    },
+    {
+      "name": "torch",
+      "version": "^1.13.1",
+      "type": "runtime"
+    },
+    {
+      "name": "tqdm",
+      "version": "^4.65.0",
+      "type": "runtime"
     },
     {
       "name": "pytest",
