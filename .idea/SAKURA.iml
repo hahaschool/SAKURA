@@ -223,7 +223,7 @@
     <content url="file://$MODULE_DIR$/runs/EX20_06" />
     <content url="file://$MODULE_DIR$/runs/EX20_07" />
     <content url="file://$MODULE_DIR$/runs/EX20_08" />
-    <orderEntry type="jdk" jdkName="Python 3.9 (dm)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.9 (SAKRA)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="R User Library" level="project" />
     <orderEntry type="library" name="R Skeletons" level="application" />

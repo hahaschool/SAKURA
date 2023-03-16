@@ -1,6 +1,6 @@
 import torch
 
-import SAKRA.models.modules as model
+import models.modules as model
 
 
 class Extractor(torch.nn.Module):

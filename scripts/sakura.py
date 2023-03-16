@@ -16,9 +16,9 @@ import torch.utils.data
 from loguru import logger
 from tqdm import tqdm
 
-from SAKRA.dataset import rna_count, rna_count_sparse
-from SAKRA.model_controllers.extractor_controller import ExtractorController
-from SAKRA.models.extractor import Extractor
+from dataset import rna_count, rna_count_sparse
+from model_controllers.extractor_controller import ExtractorController
+from models.extractor import Extractor
 from utils.data_splitter import DataSplitter
 from utils.logger import Logger
 
@@ -37,11 +37,11 @@ def parse_args():
     return parser.parse_args()
 
 
-class SAKRA(object):
+class sakura(object):
     def __init__(self, config_json_path, verbose=False,
                  suppress_train=False, suppress_tensorboardX=False):
         """
-        Initialize SAKRA model.
+        Initialize SAKURA model.
 
         Args:
             config_json_path (str): path to config json file
@@ -1465,7 +1465,7 @@ class SAKRA(object):
 
 @logger.catch
 def main():
-    logger.info('SCARE/SAKRA Prototype')
+    logger.info('SCARE/SAKURA Prototype')
     logger.info('Working directory: {}', os.getcwd())
 
     args = parse_args()
@@ -1483,8 +1483,8 @@ def main():
         if type(inference_story) is dict:
             inference_story = [inference_story[x] for x in inference_story]
 
-        # Init SAKRA instance
-        instance = SAKRA(config_json_path=args.config,
+        # Init SAKURA instance
+        instance = sakura(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=True,
                          suppress_tensorboardX=args.suppress_tensorboardX)
@@ -1500,8 +1500,8 @@ def main():
         if args.verbose:
             logger.info("Resuming checkpoint:", args.resume)
 
-        # Init SAKRA instance
-        instance = SAKRA(config_json_path=args.config,
+        # Init SAKURA instance
+        instance = sakura(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=True)
 
@@ -1525,7 +1525,7 @@ def main():
                 'Do not resume training when importing external modules, try to import and save a merged model first')
 
         # Init SAKURA instance (suppress training to merge modules)
-        instance = SAKRA(config_json_path=args.config,
+        instance = sakura(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=True)
 
@@ -1546,7 +1546,7 @@ def main():
 
 
     else:
-        instance = SAKRA(config_json_path=args.config,
+        instance = sakura(config_json_path=args.config,
                          verbose=args.verbose,
                          suppress_train=args.suppress_train)
 

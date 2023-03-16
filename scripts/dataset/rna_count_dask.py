@@ -4,11 +4,11 @@ import dask.dataframe as dd
 import pandas as pd
 from torch.utils.data import Dataset
 
-from SAKRA.utils.data_transformations import ToKBins
+from utils.data_transformations import ToKBins
 # Transformations
-from SAKRA.utils.data_transformations import ToOnehot
-from SAKRA.utils.data_transformations import ToOrdinal
-from SAKRA.utils.data_transformations import ToTensor
+from utils.data_transformations import ToOnehot
+from utils.data_transformations import ToOrdinal
+from utils.data_transformations import ToTensor
 
 
 class SCRNASeqCountDataDask(Dataset):
