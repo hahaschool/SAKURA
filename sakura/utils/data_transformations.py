@@ -18,9 +18,9 @@ class ToTensor(object):
         #print(sample)
         if input_type == 'gene':
             if type(sample) is pd.core.frame.DataFrame:
-                ret = torch.from_numpy(sample.astype(np.float).values).transpose(0, 1).float()
+                ret = torch.from_numpy(sample.astype(float).values).transpose(0, 1).float()
             elif type(sample) is pd.core.series.Series:
-                ret = torch.from_numpy(sample.astype(np.float).values).unsqueeze(0).float()
+                ret = torch.from_numpy(sample.astype(float).values).unsqueeze(0).float()
             elif type(sample) is np.ndarray:
                 ret = torch.from_numpy(sample).float()
             elif scipy.sparse.isspmatrix(sample):
@@ -96,9 +96,9 @@ class ToOrdinal(object):
         # Resolving compatibility of older sklearns
         if version.parse(sklearn.__version__) >= version.parse('0.24'):
             ortrs = skprep.OrdinalEncoder(categories=order, handle_unknown=handle_unknown, unknown_value=unknown_value,
-                                          dtype=np.int).fit(sample)
+                                          dtype=int).fit(sample)
         else:
-            ortrs = skprep.OrdinalEncoder(categories=order, dtype=np.int).fit(sample)
+            ortrs = skprep.OrdinalEncoder(categories=order, dtype=int).fit(sample)
 
         return ortrs.transform(sample)
 

@@ -231,7 +231,7 @@ class sakuraAE(object):
         self.data_splitter = DataSplitter()
 
         # 'all' split mask for selecting all data
-        self.splits['all'] = np.ones(len(self.count_data), dtype=np.bool)
+        self.splits['all'] = np.ones(len(self.count_data), dtype=bool)
 
         if self.config.get('manual_split') == 'True':
             # Should load external files for splits
@@ -255,8 +255,8 @@ class sakuraAE(object):
                                                                          seed=self.split_overall_seed)
             overall_train_test_split = self.data_splitter.get_incremental_train_test_split(base=all_dec_bin,
                                                                                            k=self.split_overall_train_dec)
-            self.splits['overall_train'] = overall_train_test_split['train'].astype(np.bool)
-            self.splits['overall_test'] = overall_train_test_split['test'].astype(np.bool)
+            self.splits['overall_train'] = overall_train_test_split['train'].astype(bool)
+            self.splits['overall_test'] = overall_train_test_split['test'].astype(bool)
         elif self.config['overall_train_test_split']['type'] == 'none':
             # Do nothing
             if self.verbose:
@@ -281,8 +281,8 @@ class sakuraAE(object):
                     cur_label_train_test_split = self.data_splitter.get_incremental_train_test_split(
                         base=cur_base_bin_marks,
                         k=self.count_data.pheno_meta[cur_pheno]['split']['train_dec'])
-                    self.splits[train_split_id] = cur_label_train_test_split['train'].astype(np.bool)
-                    self.splits[test_split_id] = cur_label_train_test_split['test'].astype(np.bool)
+                    self.splits[train_split_id] = cur_label_train_test_split['train'].astype(bool)
+                    self.splits[test_split_id] = cur_label_train_test_split['test'].astype(bool)
                 elif self.count_data.pheno_meta[cur_pheno]['split']['type'] == 'none':
                     # Do nothing
                     if self.verbose:
@@ -307,8 +307,8 @@ class sakuraAE(object):
                     cur_signature_train_test_split = self.data_splitter.get_incremental_train_test_split(
                         base=cur_base_bin_marks,
                         k=self.signature_config[cur_signature]['split']['train_dec'])
-                    self.splits[train_split_id] = cur_signature_train_test_split['train'].astype(np.bool)
-                    self.splits[test_split_id] = cur_signature_train_test_split['test'].astype(np.bool)
+                    self.splits[train_split_id] = cur_signature_train_test_split['train'].astype(bool)
+                    self.splits[test_split_id] = cur_signature_train_test_split['test'].astype(bool)
                 elif self.signature_config[cur_signature]['split']['type'] == 'none':
                     # Do nothing
                     if self.verbose:
