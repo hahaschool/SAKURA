@@ -7,17 +7,15 @@
 Single-cell data Analysis with Knowledge inputs from User using Regularized Autoencoders (SAKURA) is a knowledge-guided dimensionality reduction framework. 
 It focuses on the task of producing an embedding (i.e., a low-dimensional representation) of scRNA-seq or scATAC-seq data, to be guided by a large variety of knowledge inputs related to genes and genomic regions. 
 
-## Analysis of single-cell data
+<!--
+<p align="center">
+  Read our paper at <a href="https://www.nature.com/articles/s41587-023-02040-y" target="_blank">Mosaic integration and knowledge transfer of single-cell multimodal data with MIDAS</a>.
+</p>
+-->
 
-SAKURA is composed of modules for the following types of knowledge inputs:
-
--   Marker genes
--   Genes about confounding factors
--   Orthologous genes
--   Invariant genes
--   Bulk-sample measurements
--   Regulatory elements
--   and more to explore!
+<p align="center">
+  Read our documentation at <a href="https://yip-sakura.readthedocs.io/en/latest/" target="_blank">https://yip-sakura.readthedocs.io/en/latest/</a>.
+</p>
 
 <!-- 
 In the [user guide](https://), we provide an overview of each model.
