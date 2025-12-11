@@ -48,7 +48,7 @@ All model implementations have a high-level API that interacts with
 
 ## Getting Started  
 
-Clone the repository to your local directory. The `SAKURA` package can be installed via pip directly:
+Clone the repository to your local directory. The `sakura` package can be installed via pip directly:
 
 ```bash
 # in ~/.../SAKURA/
